@@ -14,7 +14,7 @@ Application web en PHP / MySQL destinée au comité d'organisation des JO de Los
 | Base de données | [`database/`](database/) | Livrée |
 | Site public + back-office (8 rubriques CRUD) | racine du dépôt | Livré |
 | Tests PHPUnit (29 tests, 77 assertions) + rapport | [`tests/`](tests/), [`docs/tests/`](docs/tests/) | Livrés |
-| Site en ligne (InfinityFree) | lien ajouté à la mise en production | À venir |
+| Mise en ligne (InfinityFree) | [`docs/DEPLOIEMENT.md`](docs/DEPLOIEMENT.md), [`database/deploy-production.sql`](database/deploy-production.sql) | Prête ; adresse du site ajoutée après déploiement |
 
 ## Installation en local (MAMP)
 
@@ -74,4 +74,5 @@ css/styles-admin.css      Styles ajoutés : messages, boutons, listes déroulant
 - Pages d'administration protégées par session ; déconnexion après 30 minutes d'inactivité ; session coupée si le compte est supprimé.
 - Session régénérée à la connexion (fixation de session) ; cookies `HttpOnly` et `SameSite=Strict`.
 - Contrôle des doublons en PHP **et** contraintes `UNIQUE` en base ; suppression bloquée tant que des données liées existent.
+- `.htaccess` : scripts SQL, configuration, tests, dépendances et gabarits internes inaccessibles depuis le navigateur ; en-têtes anti-clickjacking et nosniff.
 - Identifiants de la base hors dépôt (`database/config.php` dans `.gitignore`) ; aucun détail technique affiché en production.

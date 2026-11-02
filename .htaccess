@@ -1,0 +1,25 @@
+# ------------------------------------------------------------------------------
+# Durcissement Apache (MAMP en local, InfinityFree en production)
+# ------------------------------------------------------------------------------
+
+# Pas de liste automatique du contenu des dossiers
+Options -Indexes
+
+# Fichiers de développement, scripts SQL et configuration : jamais servis au navigateur
+<FilesMatch "\.(sql|bat|lock|md|log|dist|example\.php)$|^(composer\.json|phpunit\.xml|config\.php|\.gitignore|\.htaccess)$">
+    Require all denied
+</FilesMatch>
+
+# Dossiers internes (tests, dépendances, gabarits PHP, dépôt Git) : accès interdit
+RedirectMatch 404 ^/(?:.*/)?(?:tests|vendor|includes|\.git)(?:/|$)
+
+# En-têtes de sécurité (protection contre le clickjacking et le détournement de type MIME)
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Pages d'erreur sans détail technique
+ErrorDocument 403 "Accès refusé."
+ErrorDocument 404 "Page introuvable."
