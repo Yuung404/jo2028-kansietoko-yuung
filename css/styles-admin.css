@@ -1,0 +1,152 @@
+/* ------------------------------------------------------------------ */
+/* Compléments : messages, boutons, listes déroulantes, back-office   */
+/* (reprend la palette JO 2028 : noir #1b1b1b, or #d7c378)            */
+/* ------------------------------------------------------------------ */
+
+/* Messages de confirmation / d'erreur */
+.alert {
+  width: 90%;
+  max-width: 700px;
+  margin: 10px auto;
+  padding: 14px 18px;
+  border-radius: 10px;
+  font-weight: bold;
+  text-align: center;
+}
+.alert-success {
+  background-color: #e3f4e8;
+  color: #0b5a27;
+  border-left: 6px solid #009f3d;
+}
+.alert-error {
+  background-color: #fbe3e6;
+  color: #8a0016;
+  border-left: 6px solid #df0024;
+}
+
+/* Boutons (liens ou <button>) */
+.btn {
+  display: inline-block;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 50px;
+  background-color: #1b1b1b;
+  color: #d7c378;
+  font: inherit;
+  font-size: 0.9em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  transition: color 0.3s ease, background-color 0.3s ease, transform 0.3s ease;
+}
+.btn:hover,
+.btn:focus-visible {
+  background-color: #d7c378;
+  color: #1b1b1b;
+  transform: translateY(-2px);
+}
+.btn-small {
+  padding: 7px 14px;
+  font-size: 0.8em;
+}
+.btn-danger {
+  background-color: #df0024;
+  color: #ffffff;
+}
+.btn-danger:hover,
+.btn-danger:focus-visible {
+  background-color: #8a0016;
+  color: #ffffff;
+}
+.action-buttons {
+  margin: 10px 0 0;
+  text-align: center;
+}
+
+/* Formulaire réduit à un simple bouton (suppression dans un tableau) */
+form.inline-form {
+  display: inline;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  border-image: none;
+  box-shadow: none;
+}
+
+/* Tableaux d'administration : colonnes d'actions compactes */
+td.actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: center;
+}
+.table-wrap {
+  width: 100%;
+  overflow-x: auto; /* le tableau défile horizontalement sur petit écran au lieu de déborder */
+}
+
+/* Listes déroulantes et champs date / heure alignés sur les champs texte */
+select {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 18px;
+  border: 2px solid #e5e0d0;
+  border-radius: 8px;
+  font-size: 1em;
+  background-color: #ffffff;
+}
+select:focus {
+  outline: none;
+  border-color: #0085c7;
+  box-shadow: 0 0 0 4px rgba(0, 133, 199, 0.2);
+}
+.field-hint {
+  display: block;
+  margin: -12px 0 16px;
+  font-size: 0.85em;
+  color: #5c5c5c;
+}
+
+/* Le menu d'administration comporte 10 entrées : il passe sur plusieurs lignes */
+@media screen and (min-width: 1025px) {
+  nav ul.menu-admin {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    font-size: 15px;
+  }
+  nav ul.menu-admin a {
+    padding: 10px 16px;
+  }
+}
+
+/* Texte lu par les lecteurs d'écran mais invisible à l'écran (accessibilité) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* Sur tablette et mobile, le menu d'administration passe sur deux colonnes compactes */
+@media screen and (max-width: 1024px) {
+  nav ul.menu-admin {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 0;
+  }
+  nav ul.menu-admin li {
+    width: auto;
+  }
+  nav ul.menu-admin a {
+    padding: 9px 6px;
+    font-size: 0.8em;
+  }
+}
