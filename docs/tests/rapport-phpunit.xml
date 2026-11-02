@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="C:\MAMP\htdocs\jo2028-kansietoko-yuung\phpunit.xml" tests="29" assertions="77" errors="0" failures="0" skipped="0" time="56.868647">
+    <testsuite name="Unitaire" tests="15" assertions="40" errors="0" failures="0" skipped="0" time="0.678724">
+      <testsuite name="Tests\Unitaire\SecuriteTest" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Unitaire\SecuriteTest.php" tests="7" assertions="16" errors="0" failures="0" skipped="0" time="0.670827">
+        <testcase name="testLEchappementNeutraliseUnScript" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Unitaire\SecuriteTest.php" line="19" class="Tests\Unitaire\SecuriteTest" classname="Tests.Unitaire.SecuriteTest" assertions="2" time="0.022246"/>
+        <testcase name="testLeJetonCsrfEstAleatoireEtStable" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Unitaire\SecuriteTest.php" line="26" class="Tests\Unitaire\SecuriteTest" classname="Tests.Unitaire.SecuriteTest" assertions="2" time="0.001750"/>
+        <testcase name="testUneRequeteSansJetonEstRefusee" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Unitaire\SecuriteTest.php" line="34" class="Tests\Unitaire\SecuriteTest" classname="Tests.Unitaire.SecuriteTest" assertions="1" time="0.001221"/>
+        <testcase name="testUneRequeteAvecUnFauxJetonEstRefusee" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Unitaire\SecuriteTest.php" line="41" class="Tests\Unitaire\SecuriteTest" classname="Tests.Unitaire.SecuriteTest" assertions="1" time="0.000511"/>
+        <testcase name="testUneRequeteAvecLeBonJetonEstAcceptee" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Unitaire\SecuriteTest.php" line="49" class="Tests\Unitaire\SecuriteTest" classname="Tests.Unitaire.SecuriteTest" assertions="1" time="0.000978"/>
+        <testcase name="testBcryptProduitUneEmpreinteSaleeEtVerifiable" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Unitaire\SecuriteTest.php" line="56" class="Tests\Unitaire\SecuriteTest" classname="Tests.Unitaire.SecuriteTest" assertions="5" time="0.358275"/>
+        <testcase name="testLesEmpreintesDuJeuDEssaiCorrespondentAuxMotsDePasseFournis" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Unitaire\SecuriteTest.php" line="68" class="Tests\Unitaire\SecuriteTest" classname="Tests.Unitaire.SecuriteTest" assertions="4" time="0.285845"/>
+      </testsuite>
+      <testsuite name="Tests\Unitaire\ValidationTest" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Unitaire\ValidationTest.php" tests="8" assertions="24" errors="0" failures="0" skipped="0" time="0.007897">
+        <testcase name="testUnTexteObligatoireVideEstRefuse" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Unitaire\ValidationTest.php" line="13" class="Tests\Unitaire\ValidationTest" classname="Tests.Unitaire.ValidationTest" assertions="1" time="0.000468"/>
+        <testcase name="testUnTexteTropLongEstRefuse" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Unitaire\ValidationTest.php" line="19" class="Tests\Unitaire\ValidationTest" classname="Tests.Unitaire.ValidationTest" assertions="1" time="0.000351"/>
+        <testcase name="testUnTexteValideEstAccepte" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Unitaire\ValidationTest.php" line="25" class="Tests\Unitaire\ValidationTest" classname="Tests.Unitaire.ValidationTest" assertions="2" time="0.000888"/>
+        <testcase name="testLaLongueurCompteLesCaracteresEtPasLesOctets" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Unitaire\ValidationTest.php" line="32" class="Tests\Unitaire\ValidationTest" classname="Tests.Unitaire.ValidationTest" assertions="1" time="0.000268"/>
+        <testcase name="testLesDatesImpossiblesSontRefusees" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Unitaire\ValidationTest.php" line="38" class="Tests\Unitaire\ValidationTest" classname="Tests.Unitaire.ValidationTest" assertions="5" time="0.004412"/>
+        <testcase name="testLesHeuresInvalidesSontRefusees" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Unitaire\ValidationTest.php" line="48" class="Tests\Unitaire\ValidationTest" classname="Tests.Unitaire.ValidationTest" assertions="5" time="0.000259"/>
+        <testcase name="testLeFormatDuLoginEstControle" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Unitaire\ValidationTest.php" line="58" class="Tests\Unitaire\ValidationTest" classname="Tests.Unitaire.ValidationTest" assertions="5" time="0.000206"/>
+        <testcase name="testLesReglesDuMotDePasseSontAppliquees" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Unitaire\ValidationTest.php" line="68" class="Tests\Unitaire\ValidationTest" classname="Tests.Unitaire.ValidationTest" assertions="4" time="0.001045"/>
+      </testsuite>
+    </testsuite>
+    <testsuite name="Fonctionnel" tests="14" assertions="37" errors="0" failures="0" skipped="0" time="56.189923">
+      <testsuite name="Tests\Fonctionnel\AdministrateurTest" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Fonctionnel\AdministrateurTest.php" tests="2" assertions="9" errors="0" failures="0" skipped="0" time="8.788566">
+        <testcase name="testAjouterUnAdministrateurEnregistreUneEmpreinteBcrypt" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Fonctionnel\AdministrateurTest.php" line="21" class="Tests\Fonctionnel\AdministrateurTest" classname="Tests.Fonctionnel.AdministrateurTest" assertions="7" time="4.931534"/>
+        <testcase name="testUnAdministrateurNePeutPasSupprimerSonPropreCompte" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Fonctionnel\AdministrateurTest.php" line="43" class="Tests\Fonctionnel\AdministrateurTest" classname="Tests.Fonctionnel.AdministrateurTest" assertions="2" time="3.857032"/>
+      </testsuite>
+      <testsuite name="Tests\Fonctionnel\AuthentificationTest" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Fonctionnel\AuthentificationTest.php" tests="4" assertions="8" errors="0" failures="0" skipped="0" time="15.972150">
+        <testcase name="testLesPagesAdministrateurSontInaccessiblesSansConnexion" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Fonctionnel\AuthentificationTest.php" line="13" class="Tests\Fonctionnel\AuthentificationTest" classname="Tests.Fonctionnel.AuthentificationTest" assertions="2" time="3.640868"/>
+        <testcase name="testUnAdministrateurPeutSeConnecter" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Fonctionnel\AuthentificationTest.php" line="21" class="Tests\Fonctionnel\AuthentificationTest" classname="Tests.Fonctionnel.AuthentificationTest" assertions="3" time="3.786328"/>
+        <testcase name="testUnMauvaisMotDePasseEstRefuseAvecUnMessageGenerique" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Fonctionnel\AuthentificationTest.php" line="29" class="Tests\Fonctionnel\AuthentificationTest" classname="Tests.Fonctionnel.AuthentificationTest" assertions="2" time="4.211630"/>
+        <testcase name="testLaDeconnexionFermeLAccesAuBackOffice" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Fonctionnel\AuthentificationTest.php" line="38" class="Tests\Fonctionnel\AuthentificationTest" classname="Tests.Fonctionnel.AuthentificationTest" assertions="1" time="4.333325"/>
+      </testsuite>
+      <testsuite name="Tests\Fonctionnel\SportTest" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Fonctionnel\SportTest.php" tests="8" assertions="20" errors="0" failures="0" skipped="0" time="31.429207">
+        <testcase name="testAjouterUnSport" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Fonctionnel\SportTest.php" line="27" class="Tests\Fonctionnel\SportTest" classname="Tests.Fonctionnel.SportTest" assertions="5" time="4.963116"/>
+        <testcase name="testUnSportEnDoubleEstRefuse" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Fonctionnel\SportTest.php" line="38" class="Tests\Fonctionnel\SportTest" classname="Tests.Fonctionnel.SportTest" assertions="2" time="3.976725"/>
+        <testcase name="testModifierUnSport" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Fonctionnel\SportTest.php" line="47" class="Tests\Fonctionnel\SportTest" classname="Tests.Fonctionnel.SportTest" assertions="2" time="3.711143"/>
+        <testcase name="testLaModificationVersUnNomExistantEstRefusee" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Fonctionnel\SportTest.php" line="58" class="Tests\Fonctionnel\SportTest" classname="Tests.Fonctionnel.SportTest" assertions="2" time="3.526413"/>
+        <testcase name="testSupprimerUnSport" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Fonctionnel\SportTest.php" line="69" class="Tests\Fonctionnel\SportTest" classname="Tests.Fonctionnel.SportTest" assertions="2" time="3.689170"/>
+        <testcase name="testUnSportUtiliseParUneEpreuveNePeutPasEtreSupprime" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Fonctionnel\SportTest.php" line="81" class="Tests\Fonctionnel\SportTest" classname="Tests.Fonctionnel.SportTest" assertions="2" time="3.827735"/>
+        <testcase name="testUneSuppressionSansJetonCsrfEstRefusee" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Fonctionnel\SportTest.php" line="91" class="Tests\Fonctionnel\SportTest" classname="Tests.Fonctionnel.SportTest" assertions="2" time="3.988665"/>
+        <testcase name="testUnNomDeSportMalveillantEstAfficheSansEtreExecute" file="C:\MAMP\htdocs\jo2028-kansietoko-yuung\tests\Fonctionnel\SportTest.php" line="104" class="Tests\Fonctionnel\SportTest" classname="Tests.Fonctionnel.SportTest" assertions="3" time="3.746239"/>
+      </testsuite>
+    </testsuite>
+  </testsuite>
+</testsuites>

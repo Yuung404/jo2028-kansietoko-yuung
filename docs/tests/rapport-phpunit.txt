@@ -1,0 +1,39 @@
+Administrateur (Tests\Fonctionnel\Administrateur)
+ [x] Ajouter un administrateur enregistre une empreinte Bcrypt
+ [x] Un administrateur ne peut pas supprimer son propre compte
+
+Authentification (Tests\Fonctionnel\Authentification)
+ [x] Les pages d'administration sont inaccessibles sans connexion
+ [x] Un administrateur peut se connecter
+ [x] Un mauvais mot de passe est refusé avec un message générique
+ [x] La déconnexion ferme l'accès au back-office
+
+Securite (Tests\Unitaire\Securite)
+ [x] L'échappement HTML neutralise une balise script (XSS)
+ [x] Le jeton CSRF est aléatoire (64 caractères) et stable pendant la session
+ [x] Une requête sans jeton CSRF est refusée
+ [x] Une requête avec un faux jeton CSRF est refusée
+ [x] Une requête avec le bon jeton CSRF est acceptée
+ [x] Bcrypt produit une empreinte salée et vérifiable
+ [x] Les empreintes du jeu d'essai correspondent aux mots de passe de l'annexe 2
+
+Sport (Tests\Fonctionnel\Sport)
+ [x] Ajouter un sport
+ [x] Un sport en double est refusé (majuscules et espaces ignorés)
+ [x] Modifier un sport
+ [x] La modification vers un nom déjà utilisé est refusée
+ [x] Supprimer un sport
+ [x] Un sport utilisé par une épreuve ne peut pas être supprimé
+ [x] Une suppression sans jeton CSRF ou par simple lien est refusée
+ [x] Un nom de sport malveillant est affiché sans être exécuté (XSS)
+
+Validation (Tests\Unitaire\Validation)
+ [x] Un texte obligatoire vide est refusé
+ [x] Un texte trop long est refusé
+ [x] Un texte valide est accepté (y compris 255 caractères accentués)
+ [x] La longueur compte les caractères et non les octets
+ [x] Les dates impossibles sont refusées (31 février, 29 février hors année bissextile)
+ [x] Les heures invalides sont refusées
+ [x] Le format du login est contrôlé
+ [x] Les règles du mot de passe sont appliquées (8 caractères min., 72 octets max., confirmation)
+

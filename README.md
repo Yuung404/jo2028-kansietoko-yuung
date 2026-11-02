@@ -13,7 +13,7 @@ Application web en PHP / MySQL destinée au comité d'organisation des JO de Los
 | Cahier des charges techniques | [`docs/cahier-des-charges-jo2028.pdf`](docs/cahier-des-charges-jo2028.pdf) | Livré (v1.0) |
 | Base de données | [`database/`](database/) | Livrée |
 | Site public + back-office (8 rubriques CRUD) | racine du dépôt | Livré |
-| Tests unitaires (PHPUnit) | `tests/` | À venir |
+| Tests PHPUnit (29 tests, 77 assertions) + rapport | [`tests/`](tests/), [`docs/tests/`](docs/tests/) | Livrés |
 | Site en ligne (InfinityFree) | lien ajouté à la mise en production | À venir |
 
 ## Installation en local (MAMP)
@@ -29,6 +29,27 @@ Application web en PHP / MySQL destinée au comité d'organisation des JO de Los
 
 Comptes de test : `admin` / `admin123`, `john_doe` / `password123`, `jane_doe` / `pass123`.
 
+## Tests (PHPUnit)
+
+Installation des dépendances de développement (une seule fois) :
+
+```
+php composer.phar install
+```
+
+Lancement sous Windows avec MAMP (le script utilise le PHP **et** le php.ini de MAMP, sans lesquels les extensions pdo_mysql et curl manquent) :
+
+```
+lancer-tests.bat            :: résultats dans la console
+lancer-tests.bat rapport    :: génère aussi le rapport dans docs/tests/
+```
+
+- **Tests unitaires** (`tests/Unitaire`) : validation des saisies, échappement XSS, jeton CSRF, hachage Bcrypt.
+- **Tests fonctionnels** (`tests/Fonctionnel`) : PHPUnit démarre le serveur intégré de PHP et pilote les vraies pages (connexion, ajout, modification, suppression), puis vérifie le message affiché **et** l'état de la base.
+- Les tests utilisent une base séparée, `kansietoko_yuung_jo2028_test`, recréée avant chaque test : la base réelle n'est jamais modifiée.
+
+Dernier rapport : [`docs/tests/rapport-phpunit.png`](docs/tests/rapport-phpunit.png) (29 tests, 77 assertions, 0 échec, PHPUnit 11.5 / PHP 8.3).
+
 ## Organisation du code
 
 ```
@@ -39,6 +60,7 @@ pages/admin/admin-xxx/    Une rubrique par entité : manage- (liste), add-, modi
 includes/bootstrap.php    Inclus en tête de chaque page : configuration, session, sécurité, connexion
 includes/security.php     Fonctions communes : échappement, CSRF, garde d'accès, validations
 includes/*.php            Gabarits partagés (en-tête HTML, menus, pied de page)
+tests/                    Tests PHPUnit (unitaires et fonctionnels) et outillage de test
 database/                 Connexion PDO, authentification, scripts SQL
 css/styles-admin.css      Styles ajoutés : messages, boutons, listes déroulantes, menu admin
 ```
