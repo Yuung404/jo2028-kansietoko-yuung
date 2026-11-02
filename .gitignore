@@ -15,3 +15,4 @@ desktop.ini
 
 # Rapports et caches de tests
 .phpunit.result.cache
+.phpunit.cache/

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Configuration PHPUnit : lancer « vendor/bin/phpunit » à la racine du projet -->
+<phpunit bootstrap="tests/bootstrap.php"
+         colors="true"
+         failOnWarning="true"
+         failOnRisky="true">
+    <testsuites>
+        <testsuite name="Unitaire">
+            <directory>tests/Unitaire</directory>
+        </testsuite>
+        <testsuite name="Fonctionnel">
+            <directory>tests/Fonctionnel</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

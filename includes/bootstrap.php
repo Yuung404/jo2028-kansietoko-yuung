@@ -10,6 +10,12 @@
 
 $config = require __DIR__ . '/../database/config.php';
 
+// Tests automatisés (PHPUnit) : le serveur de test est lancé avec JO2028_TEST=1
+// et travaille sur une base séparée (suffixe _test) ; la base réelle n'est jamais touchée.
+if (getenv('JO2028_TEST') === '1') {
+    $config['dbname'] .= '_test';
+}
+
 error_reporting(E_ALL);
 ini_set('display_errors', $config['debug'] ? '1' : '0');
 ini_set('log_errors', '1');
