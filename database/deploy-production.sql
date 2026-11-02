@@ -5,6 +5,7 @@
 -- (onglet « Importer »). Il regroupe, dans l'ordre :
 --   1. db-jo.sql          : création des tables
 --   2. conversion en UTF-8 (utf8mb4) : l'hébergeur peut créer la base en latin1
+--      (les tables sont créées en InnoDB pour que les clés étrangères soient appliquées)
 --   3. test-data-jo.sql   : jeu d'essai
 --   4. migration-01.sql   : colonne nom_epreuve + contraintes d'unicité
 -- Le script peut être réimporté : les tables existantes sont d'abord supprimées.
@@ -12,6 +13,9 @@
 -- ==============================================================================
 
 SET NAMES utf8mb4;
+-- InnoDB obligatoire : certains hébergeurs (dont InfinityFree) créent les tables en MyISAM par défaut,
+-- moteur qui ignore silencieusement les clés étrangères.
+SET default_storage_engine = InnoDB;
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS ADMINISTRATEUR;
 DROP TABLE IF EXISTS ATHLETE;

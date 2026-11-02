@@ -34,22 +34,24 @@ Seuls les fichiers nécessaires au fonctionnement du site sont envoyés (archive
 1. Ouvrir **phpMyAdmin** depuis le panneau, sélectionner la base, onglet **Importer**.
 2. Choisir le fichier `database/deploy-production.sql`, puis **Exécuter**.
 
-*Pourquoi :* ce script unique regroupe les 3 scripts du projet (tables, jeu d'essai, migration) et convertit les tables en UTF-8, au cas où l'hébergeur crée la base en latin1.
+*Pourquoi :* ce script unique regroupe les 3 scripts du projet (tables, jeu d'essai, migration), impose le moteur **InnoDB** (InfinityFree crée les tables en MyISAM par défaut, moteur qui ignore silencieusement les clés étrangères) et convertit les tables en UTF-8, au cas où l'hébergeur crée la base en latin1.
 *Résultat :* 8 tables, le jeu d'essai, la colonne `nom_epreuve` et les 13 contraintes (7 d'unicité, 6 clés étrangères). Le script peut être réimporté sans erreur.
 
-## Étape 4 : envoyer les fichiers du site
+## Étapes 4 et 5 : envoyer le site et créer la configuration (script automatique)
 
-1. Ouvrir le **gestionnaire de fichiers** (Online File Manager) depuis le panneau, puis entrer dans `htdocs`.
-2. Supprimer la page par défaut d'InfinityFree (`index2.html` ou équivalent).
-3. Envoyer `jo2028-site.zip`, puis l'extraire dans `htdocs` (ou envoyer le contenu du dossier avec FileZilla, hôte FTP indiqué dans *Account Details*, port 21).
+Le script `outils/deployer-infinityfree.ps1` fait les deux étapes d'un coup. Placer `jo2028-site.zip` dans le même dossier que le script, puis lancer dans PowerShell :
 
-*Pourquoi :* `htdocs` est la racine publique du site ; le fichier `.htaccess` doit s'y trouver pour bloquer l'accès aux dossiers internes.
-*Résultat :* l'arborescence `htdocs/index.php`, `htdocs/pages/`, `htdocs/includes/`… est en place.
+```
+powershell -ExecutionPolicy Bypass -File deployer-infinityfree.ps1
+```
 
-## Étape 5 : configurer la connexion à la base
+- *Ce que c'est :* un script PowerShell qui se connecte en FTP à `ftpupload.net` avec le compte `if0_XXXXXXXX`.
+- *Pourquoi :* il demande le mot de passe au clavier (saisie masquée, jamais enregistrée), génère `database/config.php` de production (`debug` à `false`, encodé en UTF-8 sans BOM) puis envoie tous les fichiers dans `htdocs`, en FTP chiffré (FTPS) si le serveur l'accepte. Il supprime ensuite la page par défaut `index2.html` et efface sa copie locale temporaire, qui contenait le mot de passe.
+- *Résultat :* le site complet et sa configuration sont en place dans `htdocs`.
 
-1. Dans `htdocs/database/`, dupliquer `config.example.php` sous le nom `config.php`.
-2. Le modifier avec les informations de l'étape 2 :
+Option `-Simulation` : prépare tout sans rien envoyer, pour vérifier le script.
+
+**Méthode manuelle (équivalente)** : envoyer le contenu de `jo2028-site.zip` dans `htdocs` avec le gestionnaire de fichiers du panneau ou FileZilla, puis dupliquer `htdocs/database/config.example.php` en `config.php` et le compléter :
 
 ```php
 return [
@@ -62,8 +64,7 @@ return [
 ];
 ```
 
-*Pourquoi :* `config.php` n'est jamais publié sur GitHub (il est dans `.gitignore`) ; il est créé directement sur chaque serveur. Avec `debug` à `false`, une erreur affiche un message générique au lieu de détails exploitables par un attaquant.
-*Résultat :* le site se connecte à la base de production.
+`config.php` n'est jamais publié sur GitHub (il est dans `.gitignore`) : il est créé directement sur chaque serveur. Avec `debug` à `false`, une erreur affiche un message générique au lieu de détails exploitables par un attaquant.
 
 ## Étape 6 : activer HTTPS
 
