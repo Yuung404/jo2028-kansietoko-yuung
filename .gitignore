@@ -1,0 +1,17 @@
+# Identifiants de connexion à la base (jamais publiés)
+database/database.php
+.env
+
+# Dépendances Composer
+/vendor/
+
+# Fichiers système / éditeur
+.DS_Store
+__MACOSX/
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Rapports et caches de tests
+.phpunit.result.cache
