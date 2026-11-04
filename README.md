@@ -6,6 +6,8 @@ Application web en PHP / MySQL destinée au comité d'organisation des JO de Los
 
 **Auteur :** Yuung Addi KANSIETOKO
 
+**Site en ligne :** https://yuung404.infinityfree.me
+
 ## Livrables
 
 | Livrable | Emplacement | État |
@@ -14,7 +16,7 @@ Application web en PHP / MySQL destinée au comité d'organisation des JO de Los
 | Base de données | [`database/`](database/) | Livrée |
 | Site public + back-office (8 rubriques CRUD) | racine du dépôt | Livré |
 | Tests PHPUnit (29 tests, 77 assertions) + rapport | [`tests/`](tests/), [`docs/tests/`](docs/tests/) | Livrés |
-| Mise en ligne (InfinityFree) | [`docs/DEPLOIEMENT.md`](docs/DEPLOIEMENT.md), [`database/deploy-production.sql`](database/deploy-production.sql) | Prête ; adresse du site ajoutée après déploiement |
+| Mise en ligne (InfinityFree) | [`docs/DEPLOIEMENT.md`](docs/DEPLOIEMENT.md), [`database/deploy-production.sql`](database/deploy-production.sql) | En ligne : https://yuung404.infinityfree.me |
 
 ## Installation en local (MAMP)
 

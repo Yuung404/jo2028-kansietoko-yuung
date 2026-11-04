@@ -82,7 +82,7 @@ return [
     $lignes.Add('show-error')
     $lignes.Add('retry = 3')
     $lignes.Add('connect-timeout = 30')
-    $lignes.Add('write-out = "  envoyé : %{url_effective}\n"')
+    $lignes.Add('write-out = "  OK : %{url_effective}\n"')   # texte ASCII : la console Windows affiche mal les accents de curl
     foreach ($f in $fichiers) {
         $relatif = $f.FullName.Substring($temp.Length + 1).Replace('\', '/')
         $lignes.Add('upload-file = ' + (Cfg $f.FullName))
@@ -110,7 +110,7 @@ return [
     Write-Host "$($fichiers.Count) fichiers envoyés dans $DossierDistant." -ForegroundColor Green
 
     # --- 5. Page par défaut d'InfinityFree (absente au deuxième déploiement : erreur ignorée)
-    $authCfg = @('user = ' + (Cfg "${FtpUtilisateur}:$motDePasse"), 'ssl-reqd', 'silent')
+    $authCfg = @('user = ' + (Cfg "${FtpUtilisateur}:$motDePasse"), 'ssl-reqd', 'silent', 'no-progress-meter')
     [System.IO.File]::WriteAllLines($curlCfg, $authCfg, $utf8)
     & curl.exe --config $curlCfg --quote "DELE $DossierDistant/index2.html" --output NUL "ftp://$FtpHote/"
     if ($LASTEXITCODE -eq 0) { Write-Host 'Page par défaut index2.html supprimée.' }

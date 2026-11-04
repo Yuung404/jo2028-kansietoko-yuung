@@ -68,7 +68,7 @@ return [
 
 ## Étape 6 : activer HTTPS
 
-Dans le panneau : **SSL Certificates**, demander un certificat gratuit pour le sous-domaine, puis l'installer.
+Sur un sous-domaine gratuit d'InfinityFree (`*.infinityfree.me`), HTTPS fonctionne d'emblée grâce au certificat partagé de l'hébergeur : rien à faire (vérifié sur https://yuung404.infinityfree.me). Pour un domaine personnel, passer par **SSL Certificates** dans le panneau pour demander puis installer un certificat gratuit.
 
 *Pourquoi :* le mot de passe administrateur ne doit pas circuler en clair. Le site marque le cookie de session `Secure` dès que le serveur signale une connexion HTTPS (variable `$_SERVER['HTTPS']`) ; à contrôler dans les outils de développement du navigateur (onglet Application > Cookies).
 *Résultat :* le site répond en `https://` avec le cadenas.
