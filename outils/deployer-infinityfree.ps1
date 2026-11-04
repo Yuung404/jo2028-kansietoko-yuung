@@ -1,14 +1,16 @@
 ﻿<#
 .SYNOPSIS
-    Déploie le site JO 2028 sur InfinityFree par FTP.
+    Déploie le site JO 2028 sur InfinityFree par FTP chiffré (FTPS), avec curl.
 
 .DESCRIPTION
     1. Demande le mot de passe du compte d'hébergement au clavier (saisie masquée,
        jamais affichée ni enregistrée sur le disque de façon durable).
     2. Décompresse l'archive du site dans un dossier temporaire et y génère le fichier
        database/config.php de production (debug désactivé).
-    3. Envoie tous les fichiers dans /htdocs, en FTP chiffré (FTPS) si le serveur l'accepte.
-    4. Supprime la page par défaut d'InfinityFree (index2.html) puis le dossier temporaire.
+    3. Envoie tous les fichiers dans /htdocs en FTPS avec curl.exe (fourni avec Windows 10 et 11).
+       curl remplace FtpWebRequest de .NET : avec le serveur Pure-FTPd d'InfinityFree, FtpWebRequest
+       ferme mal la session TLS du canal de données et chaque envoi échoue en erreur 451.
+    4. Supprime la page par défaut d'InfinityFree (index2.html), puis tous les fichiers temporaires.
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File deployer-infinityfree.ps1
@@ -26,36 +28,18 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$temp = Join-Path $env:TEMP 'jo2028-deploiement'
+$temp    = Join-Path $env:TEMP 'jo2028-deploiement'
+$curlCfg = Join-Path $env:TEMP 'jo2028-curl.cfg'    # contient le mot de passe : supprimé dans le bloc finally
+$utf8    = [System.Text.UTF8Encoding]::new($false)  # UTF-8 sans BOM
 
-function Ftp-Requete([string]$chemin, [string]$methode) {
-    $uri = "ftp://$FtpHote$chemin"
-    $r = [System.Net.FtpWebRequest]::Create($uri)
-    $r.Method      = $methode
-    $r.Credentials = $script:identifiants
-    $r.EnableSsl   = $script:chiffre      # FTPS explicite : identifiants et fichiers chiffrés
-    $r.UsePassive  = $true
-    $r.UseBinary   = $true
-    $r.KeepAlive   = $true
-    $r.Timeout     = 60000
-    return $r
-}
-
-function Ftp-CreerDossier([string]$chemin) {
-    try { (Ftp-Requete $chemin ([System.Net.WebRequestMethods+Ftp]::MakeDirectory)).GetResponse().Close() }
-    catch { }   # le dossier existe déjà : pas une erreur
-}
-
-function Ftp-Envoyer([string]$local, [string]$distant) {
-    $r = Ftp-Requete $distant ([System.Net.WebRequestMethods+Ftp]::UploadFile)
-    $octets = [System.IO.File]::ReadAllBytes($local)
-    $r.ContentLength = $octets.Length
-    $flux = $r.GetRequestStream(); $flux.Write($octets, 0, $octets.Length); $flux.Close()
-    $r.GetResponse().Close()
-}
+# Chaîne entre guillemets pour le fichier de configuration de curl : \ et " sont échappés
+function Cfg([string]$valeur) { '"' + $valeur.Replace('\', '\\').Replace('"', '\"') + '"' }
 
 try {
     if (-not (Test-Path $Archive)) { throw "Archive introuvable : $Archive" }
+    if (-not $Simulation -and -not (Get-Command curl.exe -ErrorAction SilentlyContinue)) {
+        throw 'curl.exe introuvable (il est fourni avec Windows 10 version 1803 et suivantes).'
+    }
 
     # --- 1. Mot de passe (saisie masquée)
     if ($Simulation) {
@@ -65,7 +49,6 @@ try {
         $motDePasse = [System.Net.NetworkCredential]::new('', $saisie).Password
         if ([string]::IsNullOrEmpty($motDePasse)) { throw 'Aucun mot de passe saisi.' }
     }
-    $script:identifiants = [System.Net.NetworkCredential]::new($FtpUtilisateur, $motDePasse)
 
     # --- 2. Préparation locale : archive + config.php de production
     Remove-Item -Recurse -Force $temp -ErrorAction SilentlyContinue
@@ -84,11 +67,28 @@ return [
 ];
 "@
     # UTF-8 SANS BOM : un BOM serait envoyé avant les en-têtes HTTP et casserait les sessions
-    [System.IO.File]::WriteAllText((Join-Path $temp 'database\config.php'), $config, [System.Text.UTF8Encoding]::new($false))
+    [System.IO.File]::WriteAllText((Join-Path $temp 'database\config.php'), $config, $utf8)
 
-    $fichiers = Get-ChildItem $temp -Recurse -File
-    $dossiers = Get-ChildItem $temp -Recurse -Directory | Sort-Object { $_.FullName.Length }
-    Write-Host "Préparé : $($fichiers.Count) fichiers, $($dossiers.Count) dossiers (config.php de production inclus)."
+    $fichiers = @(Get-ChildItem $temp -Recurse -File -Force)
+    Write-Host "Préparé : $($fichiers.Count) fichiers (config.php de production inclus)."
+
+    # --- 3. Fichier de configuration de curl : identifiants + une paire fichier / adresse par envoi
+    $lignes = [System.Collections.Generic.List[string]]::new()
+    $lignes.Add('user = ' + (Cfg "${FtpUtilisateur}:$motDePasse"))
+    $lignes.Add('ssl-reqd')            # FTPS obligatoire : refuse de continuer sans chiffrement
+    $lignes.Add('ftp-create-dirs')     # crée les dossiers distants manquants
+    $lignes.Add('ftp-pasv')
+    $lignes.Add('silent')
+    $lignes.Add('show-error')
+    $lignes.Add('retry = 3')
+    $lignes.Add('connect-timeout = 30')
+    $lignes.Add('write-out = "  envoyé : %{url_effective}\n"')
+    foreach ($f in $fichiers) {
+        $relatif = $f.FullName.Substring($temp.Length + 1).Replace('\', '/')
+        $lignes.Add('upload-file = ' + (Cfg $f.FullName))
+        $lignes.Add('url = ' + (Cfg "ftp://$FtpHote$DossierDistant/$relatif"))
+    }
+    [System.IO.File]::WriteAllLines($curlCfg, $lignes, $utf8)
 
     if ($Simulation) {
         Write-Host '--- SIMULATION : aucun envoi. Fichiers qui seraient envoyés :'
@@ -97,46 +97,29 @@ return [
         Write-Host "config.php (extrait) : $($ligne.Trim())"
         $bom = [System.IO.File]::ReadAllBytes((Join-Path $temp 'database\config.php'))[0..2] -join ','
         Write-Host "3 premiers octets de config.php : $bom (60,63,112 = '<?p' : pas de BOM)"
+        Write-Host "Configuration curl : $($lignes.Count) lignes, $($fichiers.Count) paires fichier / adresse."
         return
     }
 
-    # --- 3. Connexion : FTPS d'abord, FTP simple seulement avec accord explicite
-    $script:chiffre = $true
-    try {
-        (Ftp-Requete "$DossierDistant/" ([System.Net.WebRequestMethods+Ftp]::ListDirectory)).GetResponse().Close()
-        Write-Host 'Connexion FTPS (chiffrée) établie.' -ForegroundColor Green
-    } catch {
-        Write-Host "FTPS refusé par le serveur : $($_.Exception.Message)" -ForegroundColor Yellow
-        $reponse = Read-Host 'Continuer en FTP NON chiffré (le mot de passe circulera en clair) ? (o/N)'
-        if ($reponse -ne 'o') { throw 'Déploiement annulé.' }
-        $script:chiffre = $false
-        (Ftp-Requete "$DossierDistant/" ([System.Net.WebRequestMethods+Ftp]::ListDirectory)).GetResponse().Close()
+    # --- 4. Envoi : un seul appel à curl, la connexion FTPS est réutilisée d'un fichier à l'autre
+    Write-Host "Envoi de $($fichiers.Count) fichiers en FTPS vers $FtpHote$DossierDistant ..."
+    & curl.exe --config $curlCfg
+    if ($LASTEXITCODE -ne 0) {
+        throw "Échec de l'envoi (code curl $LASTEXITCODE). Code 67 : mot de passe refusé ; code 64 : chiffrement refusé ; code 28 : délai dépassé."
     }
-
-    # --- 4. Envoi
-    foreach ($d in $dossiers) {
-        Ftp-CreerDossier ($DossierDistant + '/' + $d.FullName.Substring($temp.Length + 1).Replace('\', '/'))
-    }
-    $i = 0
-    foreach ($f in $fichiers) {
-        $i++
-        $distant = $DossierDistant + '/' + $f.FullName.Substring($temp.Length + 1).Replace('\', '/')
-        Write-Progress -Activity 'Envoi du site' -Status $distant -PercentComplete (100 * $i / $fichiers.Count)
-        Ftp-Envoyer $f.FullName $distant
-    }
-    Write-Progress -Activity 'Envoi du site' -Completed
     Write-Host "$($fichiers.Count) fichiers envoyés dans $DossierDistant." -ForegroundColor Green
 
-    # --- 5. Page par défaut d'InfinityFree
-    try {
-        (Ftp-Requete "$DossierDistant/index2.html" ([System.Net.WebRequestMethods+Ftp]::DeleteFile)).GetResponse().Close()
-        Write-Host 'Page par défaut index2.html supprimée.'
-    } catch { }
+    # --- 5. Page par défaut d'InfinityFree (absente au deuxième déploiement : erreur ignorée)
+    $authCfg = @('user = ' + (Cfg "${FtpUtilisateur}:$motDePasse"), 'ssl-reqd', 'silent')
+    [System.IO.File]::WriteAllLines($curlCfg, $authCfg, $utf8)
+    & curl.exe --config $curlCfg --quote "DELE $DossierDistant/index2.html" --output NUL "ftp://$FtpHote/"
+    if ($LASTEXITCODE -eq 0) { Write-Host 'Page par défaut index2.html supprimée.' }
 
     Write-Host 'Déploiement terminé.' -ForegroundColor Green
 }
 finally {
-    # Le dossier temporaire contient config.php (mot de passe) : il est toujours supprimé
+    # Le dossier temporaire (config.php) et la configuration curl contiennent le mot de passe : toujours supprimés
     Remove-Item -Recurse -Force $temp -ErrorAction SilentlyContinue
-    $motDePasse = $null; $mdpPhp = $null; $config = $null
+    Remove-Item -Force $curlCfg -ErrorAction SilentlyContinue
+    $motDePasse = $null; $mdpPhp = $null; $config = $null; $lignes = $null; $authCfg = $null
 }

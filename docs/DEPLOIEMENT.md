@@ -45,8 +45,8 @@ Le script `outils/deployer-infinityfree.ps1` fait les deux étapes d'un coup. Pl
 powershell -ExecutionPolicy Bypass -File deployer-infinityfree.ps1
 ```
 
-- *Ce que c'est :* un script PowerShell qui se connecte en FTP à `ftpupload.net` avec le compte `if0_XXXXXXXX`.
-- *Pourquoi :* il demande le mot de passe au clavier (saisie masquée, jamais enregistrée), génère `database/config.php` de production (`debug` à `false`, encodé en UTF-8 sans BOM) puis envoie tous les fichiers dans `htdocs`, en FTP chiffré (FTPS) si le serveur l'accepte. Il supprime ensuite la page par défaut `index2.html` et efface sa copie locale temporaire, qui contenait le mot de passe.
+- *Ce que c'est :* un script PowerShell qui envoie le site en FTPS à `ftpupload.net` avec le compte `if0_XXXXXXXX`, au moyen de `curl.exe` (fourni avec Windows 10 et 11). `curl` remplace `FtpWebRequest` de .NET, qui ferme mal la session TLS du canal de données avec le serveur Pure-FTPd d'InfinityFree : chaque envoi échouait en erreur 451.
+- *Pourquoi :* il demande le mot de passe au clavier (saisie masquée, jamais enregistrée), génère `database/config.php` de production (`debug` à `false`, encodé en UTF-8 sans BOM), puis envoie tous les fichiers dans `htdocs` en un seul appel à `curl` (FTPS obligatoire, dossiers distants créés au besoin, une ligne affichée par fichier envoyé). Il supprime ensuite la page par défaut `index2.html` et efface ses fichiers temporaires, qui contenaient le mot de passe.
 - *Résultat :* le site complet et sa configuration sont en place dans `htdocs`.
 
 Option `-Simulation` : prépare tout sans rien envoyer, pour vérifier le script.
