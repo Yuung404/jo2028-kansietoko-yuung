@@ -37,6 +37,11 @@ Seuls les fichiers nécessaires au fonctionnement du site sont envoyés (archive
 *Pourquoi :* ce script unique regroupe les 3 scripts du projet (tables, jeu d'essai, migration), impose le moteur **InnoDB** (InfinityFree crée les tables en MyISAM par défaut, moteur qui ignore silencieusement les clés étrangères) et convertit les tables en UTF-8, au cas où l'hébergeur crée la base en latin1.
 *Résultat :* 8 tables, le jeu d'essai, la colonne `nom_epreuve` et les 13 contraintes (7 d'unicité, 6 clés étrangères). Le script peut être réimporté sans erreur.
 
+**À faire juste après la mise en ligne :** se connecter avec le compte `admin`, ouvrir **Administration > Administrateurs**, cliquer sur **Modifier** pour `admin` et lui donner un mot de passe personnel (8 caractères minimum), noté uniquement dans un gestionnaire de mots de passe.
+
+*Pourquoi :* le compte `admin` est importé avec le mot de passe du jeu d'essai, qui figure dans les tests du dépôt public. Tant qu'il n'est pas changé, n'importe qui peut entrer dans l'administration du site en ligne.
+*Résultat :* l'ancien mot de passe ne fonctionne plus en ligne ; il reste valable uniquement sur la copie locale.
+
 ## Étapes 4 et 5 : envoyer le site et créer la configuration (script automatique)
 
 Le script `outils/deployer-infinityfree.ps1` fait les deux étapes d'un coup. Placer `jo2028-site.zip` dans le même dossier que le script, puis lancer dans PowerShell :
@@ -78,7 +83,7 @@ Sur un sous-domaine gratuit d'InfinityFree (`*.infinityfree.me`), HTTPS fonction
 | Vérification | Résultat attendu |
 |---|---|
 | Accueil, Sports, Calendrier, Résultats | Pages affichées, accents corrects (« Algérie ») |
-| Connexion `admin` / `admin123` | Accès au back-office |
+| Connexion avec le compte `admin` et son mot de passe personnel | Accès au back-office |
 | Ajout, modification, suppression d'un sport | Messages de confirmation, données à jour sur les pages publiques |
 | `https://<site>/database/deploy-production.sql` | 403 Accès refusé |
 | `https://<site>/includes/bootstrap.php` | 404 Page introuvable |

@@ -29,7 +29,7 @@ Application web en PHP / MySQL destinée au comité d'organisation des JO de Los
 3. Copier `database/config.example.php` en `database/config.php` et y renseigner les identifiants MySQL.
 4. Ouvrir http://localhost/jo2028-kansietoko-yuung/
 
-Comptes de test : `admin` / `admin123`, `john_doe` / `password123`, `jane_doe` / `pass123`.
+Comptes de test du jeu d'essai, **en local uniquement** : `admin`, `john_doe` et `jane_doe`. Leurs mots de passe de test sont dans `tests/Support/Navigateur.php`. Ils ne doivent jamais servir sur le site en ligne, dont le mot de passe administrateur est personnel et n'est écrit nulle part.
 
 ## Tests (PHPUnit)
 

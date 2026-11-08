@@ -209,10 +209,11 @@ INSERT INTO PARTICIPER (id_athlete, id_epreuve, resultat) VALUES
     (10, 10, '5.8');
 
 -- Insertion des données dans la table ADMINISTRATEUR
+-- En production, un seul compte : admin, avec le mot de passe PROVISOIRE du jeu d'essai.
+-- Il doit être changé dès la première connexion (docs/DEPLOIEMENT.md, étape 3).
+-- Les comptes de démonstration john_doe et jane_doe restent dans test-data-jo.sql (local uniquement).
 INSERT INTO ADMINISTRATEUR (id_admin, nom_admin, prenom_admin, login, password) VALUES
-    (1, 'Admin', 'Super', 'admin', '$2y$10$WFxymbZ/gV2XfGy1We2bB.NZ9owdEU5QKUFWAicOY7qayhbe93ACm'),
-    (2, 'User', 'John', 'john_doe', '$2y$10$VSdvPWt4OQnuQdT2vrP1z.5PzBJ5FuJc/bJhIFL8TB2AP99u3h8cO'),
-    (3, 'User', 'Jane', 'jane_doe', '$2y$10$xP/2LE33Hy./Je/CLqLyL.8KJFWgXsHXcaln/usfr8Vv6INtCKIoO');
+    (1, 'Admin', 'Super', 'admin', '$2y$10$WFxymbZ/gV2XfGy1We2bB.NZ9owdEU5QKUFWAicOY7qayhbe93ACm');
 
 -- ------------------------------------------------------------------ 4. Migration 01
 -- ----------------------------------------------------------------------------
