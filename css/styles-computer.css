@@ -160,6 +160,18 @@ input {
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
+/* Ajout : les listes déroulantes (athlètes, calendrier, résultats) ont le même style que les champs de saisie */
+select {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 18px;
+  box-sizing: border-box;
+  border: 2px solid #e5e0d0;
+  border-radius: 8px;
+  font-size: 1em;
+  background-color: #ffffff;
+}
+
 input:focus {
   outline: none;
   border-color: #0085c7;
@@ -215,6 +227,9 @@ img {
     display: flex;
     font-size: 18px;
     gap: 15px;
+    /* Ajout : le menu de l'administration compte 10 liens (8 rubriques), il passe sur deux lignes au lieu de déborder */
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   nav li {

@@ -1,73 +1,182 @@
 <?php
-/** Gestion des genres : modification. */
-$racine = '../../../';
-$titre = 'Modifier un genre';
-require_once __DIR__ . '/../../../includes/bootstrap.php';
-require_admin($racine);
+session_start();
+require_once("../../../database/database.php");
 
-$idGenre = input_id(INPUT_GET, 'id_genre');
-if ($idGenre === null) {
-    flash('error', 'Identifiant de genre invalide.');
-    redirect('manage-genders.php');
+// Vérifiez si l'utilisateur est connecté
+if (!isset($_SESSION['login'])) {
+    header('Location: ../../../index.php');
+    exit();
 }
 
-// Chargement du genre à modifier
-$stmt = $connexion->prepare('SELECT nom_genre FROM GENRE WHERE id_genre = :id');
-$stmt->execute([':id' => $idGenre]);
-$genre = $stmt->fetch();
-if (!$genre) {
-    flash('error', 'Genre introuvable.');
-    redirect('manage-genders.php');
+// Générer un token CSRF si ce n'est pas déjà fait
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32)); // Génère un token CSRF sécurisé
 }
-$nomGenre = $genre['nom_genre'];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!csrf_verify()) {
-        flash('error', 'Session expirée ou requête invalide. Veuillez réessayer.');
-        redirect("modify-gender.php?id_genre=$idGenre");
+// Vérifiez si l'ID du genre est fourni dans l'URL
+if (!isset($_GET['id_genre'])) {
+    $_SESSION['error'] = "ID du genre manquant.";
+    header("Location: manage-genders.php");
+    exit();
+}
+
+$id_genre = filter_input(INPUT_GET, 'id_genre', FILTER_VALIDATE_INT);
+
+// Vérifiez si l'ID du genre est un entier valide
+if (!$id_genre) {
+    $_SESSION['error'] = "ID du genre invalide.";
+    header("Location: manage-genders.php");
+    exit();
+}
+
+// Récupérez les informations du genre pour affichage dans le formulaire
+try {
+    $queryGender = "SELECT nom_genre FROM GENRE WHERE id_genre = :id_genre";
+    $statementGender = $connexion->prepare($queryGender);
+    $statementGender->bindParam(":id_genre", $id_genre, PDO::PARAM_INT);
+    $statementGender->execute();
+
+    if ($statementGender->rowCount() > 0) {
+        $genre = $statementGender->fetch(PDO::FETCH_ASSOC);
+    } else {
+        $_SESSION['error'] = "Genre non trouvé.";
+        header("Location: manage-genders.php");
+        exit();
+    }
+} catch (PDOException $e) {
+    error_log("Erreur PDO : " . $e->getMessage());
+    $_SESSION['error'] = "Erreur lors de la récupération du genre.";
+    header("Location: manage-genders.php");
+    exit();
+}
+
+// Vérifiez si le formulaire est soumis
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Vérification du token CSRF
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $_SESSION['error'] = "Token CSRF invalide.";
+        header("Location: modify-gender.php?id_genre=$id_genre");
+        exit();
     }
 
-    $nomGenre = post_text('nom_genre');
-    $erreur = valider_texte($nomGenre, 'Le nom du genre');
+    // Récupération des champs (texte gardé tel qu'il a été tapé, sans les espaces autour)
+    $nomGenre = trim((string) filter_input(INPUT_POST, 'nomGenre'));
 
-    // Doublon : un AUTRE genre (id différent) porte déjà ce nom
-    if ($erreur === null) {
-        $stmt = $connexion->prepare('SELECT COUNT(*) FROM GENRE WHERE nom_genre = :nom AND id_genre <> :id');
-        $stmt->execute([':nom' => $nomGenre, ':id' => $idGenre]);
-        if ($stmt->fetchColumn() > 0) {
-            $erreur = 'Un autre genre porte déjà ce nom.';
+    // Vérifiez si le champ est vide
+    if (empty($nomGenre)) {
+        $_SESSION['error'] = "Le nom du genre ne peut pas être vide.";
+        header("Location: modify-gender.php?id_genre=$id_genre");
+        exit();
+    }
+
+    try {
+        // Vérifiez si un autre genre porte déjà ces informations (pas de doublon lors d'une modification)
+        $queryCheck = "SELECT id_genre FROM GENRE WHERE nom_genre = :nomGenre AND id_genre <> :id_genre";
+        $statementCheck = $connexion->prepare($queryCheck);
+        $statementCheck->bindParam(":nomGenre", $nomGenre, PDO::PARAM_STR);
+        $statementCheck->bindParam(":id_genre", $id_genre, PDO::PARAM_INT);
+        $statementCheck->execute();
+
+        if ($statementCheck->rowCount() > 0) {
+            $_SESSION['error'] = "Le genre existe déjà.";
+            header("Location: modify-gender.php?id_genre=$id_genre");
+            exit();
         }
-    }
 
-    if ($erreur === null) {
-        try {
-            $stmt = $connexion->prepare('UPDATE GENRE SET nom_genre = :nom WHERE id_genre = :id');
-            $stmt->execute([':nom' => $nomGenre, ':id' => $idGenre]);
-            flash('success', "Le genre « $nomGenre » a été modifié.");
-            redirect('manage-genders.php');
-        } catch (PDOException $e) {
-            if (!est_doublon($e)) {
-                throw $e;
-            }
-            $erreur = 'Un autre genre porte déjà ce nom.';
+        // Requête pour mettre à jour le genre
+        $query = "UPDATE GENRE SET nom_genre = :nomGenre WHERE id_genre = :id_genre";
+        $statement = $connexion->prepare($query);
+        $statement->bindParam(":nomGenre", $nomGenre, PDO::PARAM_STR);
+        $statement->bindParam(":id_genre", $id_genre, PDO::PARAM_INT);
+
+        // Exécutez la requête
+        if ($statement->execute()) {
+            $_SESSION['success'] = "Le genre a été modifié avec succès.";
+            header("Location: manage-genders.php");
+            exit();
+        } else {
+            $_SESSION['error'] = "Erreur lors de la modification du genre.";
+            header("Location: modify-gender.php?id_genre=$id_genre");
+            exit();
         }
+    } catch (PDOException $e) {
+        error_log("Erreur PDO : " . $e->getMessage());
+        $_SESSION['error'] = "Erreur lors de la modification du genre.";
+        header("Location: modify-gender.php?id_genre=$id_genre");
+        exit();
     }
-
-    flash('error', $erreur);
 }
 
-require __DIR__ . '/../../../includes/head.php';
-require __DIR__ . '/../../../includes/nav-admin.php';
+// Afficher les erreurs en PHP (fonctionne à condition d’avoir activé l’option en local)
+error_reporting(E_ALL);
+ini_set("display_errors", 1);
 ?>
+
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../../css/normalize.css">
+    <link rel="stylesheet" href="../../../css/styles-computer.css">
+    <link rel="stylesheet" href="../../../css/styles-responsive.css">
+    <link rel="shortcut icon" href="../../../img/favicon.ico" type="image/x-icon">
+    <title>Modifier un Genre - Jeux Olympiques - Los Angeles 2028</title>
+</head>
+
+<body>
+    <header>
+        <nav>
+            <!-- Menu de l'administration -->
+            <ul class="menu">
+                <li><a href="../admin.php">Accueil Administration</a></li>
+                <li><a href="../admin-users/manage-users.php">Gestion Administrateurs</a></li>
+                <li><a href="../admin-sports/manage-sports.php">Gestion Sports</a></li>
+                <li><a href="../admin-places/manage-places.php">Gestion Lieux</a></li>
+                <li><a href="../admin-countries/manage-countries.php">Gestion Pays</a></li>
+                <li><a href="../admin-events/manage-events.php">Gestion Calendrier</a></li>
+                <li><a href="../admin-athletes/manage-athletes.php">Gestion Athlètes</a></li>
+                <li><a href="../admin-genders/manage-genders.php">Gestion Genres</a></li>
+                <li><a href="../admin-results/manage-results.php">Gestion Résultats</a></li>
+                <li><a href="../../logout.php">Déconnexion</a></li>
+            </ul>
+        </nav>
+    </header>
+
     <main>
-        <h1>Modifier un genre</h1>
-        <?php show_flash(); ?>
-        <form action="modify-gender.php?id_genre=<?= $idGenre ?>" method="post">
-            <?= csrf_field() ?>
-            <label for="nom_genre">Nom du genre :</label>
-            <input type="text" name="nom_genre" id="nom_genre" maxlength="255" value="<?= e($nomGenre) ?>" required>
-            <input type="submit" value="Enregistrer les modifications">
+        <h1>Modifier un Genre</h1>
+        <?php
+        // Affichage des messages d'erreur ou de succès
+        if (isset($_SESSION['error'])) {
+            echo '<p style="color: red;">' . htmlspecialchars($_SESSION['error'], ENT_QUOTES, 'UTF-8') . '</p>';
+            unset($_SESSION['error']);
+        }
+        if (isset($_SESSION['success'])) {
+            echo '<p style="color: green;">' . htmlspecialchars($_SESSION['success'], ENT_QUOTES, 'UTF-8') . '</p>';
+            unset($_SESSION['success']);
+        }
+        ?>
+
+        <form action="modify-gender.php?id_genre=<?php echo $id_genre; ?>" method="post"
+            onsubmit="return confirm('Êtes-vous sûr de vouloir modifier ce genre?')">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+            <label for="nomGenre">Nom du Genre :</label>
+            <input type="text" name="nomGenre" id="nomGenre" maxlength="255"
+                value="<?php echo htmlspecialchars($genre['nom_genre']); ?>" required>
+            <input type="submit" value="Modifier le Genre">
         </form>
-        <p class="paragraph-link"><a class="link-home" href="manage-genders.php">Retour à la gestion des genres</a></p>
+
+        <p class="paragraph-link">
+            <a class="link-home" href="manage-genders.php">Retour à la gestion des genres</a>
+        </p>
     </main>
-<?php require __DIR__ . '/../../../includes/footer.php'; ?>
+
+    <footer>
+        <figure>
+            <img src="../../../img/logo-jo.png" alt="logo Jeux Olympiques - Los Angeles 2028">
+        </figure>
+    </footer>
+</body>
+
+</html>

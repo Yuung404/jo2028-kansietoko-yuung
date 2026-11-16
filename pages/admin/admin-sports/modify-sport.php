@@ -1,73 +1,189 @@
 <?php
-/** Gestion des sports : modification. */
-$racine = '../../../';
-$titre = 'Modifier un sport';
-require_once __DIR__ . '/../../../includes/bootstrap.php';
-require_admin($racine);
+session_start();
+require_once("../../../database/database.php");
 
-$idSport = input_id(INPUT_GET, 'id_sport');
-if ($idSport === null) {
-    flash('error', 'Identifiant de sport invalide.');
-    redirect('manage-sports.php');
+// Vérifiez si l'utilisateur est connecté
+if (!isset($_SESSION['login'])) {
+    header('Location: ../../../index.php');
+    exit();
 }
 
-// Chargement du sport à modifier
-$stmt = $connexion->prepare('SELECT nom_sport FROM SPORT WHERE id_sport = :id');
-$stmt->execute([':id' => $idSport]);
-$sport = $stmt->fetch();
-if (!$sport) {
-    flash('error', 'Sport introuvable.');
-    redirect('manage-sports.php');
+// Correction : jeton CSRF, comme dans add-sport.php (le formulaire de modification n'en avait pas)
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32)); // Génère un token CSRF sécurisé
 }
-$nomSport = $sport['nom_sport'];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!csrf_verify()) {
-        flash('error', 'Session expirée ou requête invalide. Veuillez réessayer.');
-        redirect("modify-sport.php?id_sport=$idSport");
+// Vérifiez si l'ID du sport est fourni dans l'URL
+if (!isset($_GET['id_sport'])) {
+    $_SESSION['error'] = "ID du sport manquant.";
+    header("Location: manage-sports.php");
+    exit();
+}
+
+$id_sport = filter_input(INPUT_GET, 'id_sport', FILTER_VALIDATE_INT);
+
+// Vérifiez si l'ID du sport est un entier valide
+if (!$id_sport && $id_sport !== 0) {
+    $_SESSION['error'] = "ID du sport invalide.";
+    header("Location: manage-sports.php");
+    exit();
+}
+
+// Vider les messages de succès précédents
+if (isset($_SESSION['success'])) {
+    unset($_SESSION['success']);
+}
+
+// Récupérez les informations du sport pour affichage dans le formulaire
+try {
+    $querySport = "SELECT nom_sport FROM SPORT WHERE id_sport = :idSport";
+    $statementSport = $connexion->prepare($querySport);
+    $statementSport->bindParam(":idSport", $id_sport, PDO::PARAM_INT);
+    $statementSport->execute();
+
+    if ($statementSport->rowCount() > 0) {
+        $sport = $statementSport->fetch(PDO::FETCH_ASSOC);
+    } else {
+        $_SESSION['error'] = "Sport non trouvé.";
+        header("Location: manage-sports.php");
+        exit();
+    }
+} catch (PDOException $e) {
+    // Correction : le message SQL va dans le journal du serveur, pas à l'écran
+    error_log("Erreur PDO : " . $e->getMessage());
+    $_SESSION['error'] = "Erreur lors de la récupération du sport.";
+    header("Location: manage-sports.php");
+    exit();
+}
+
+// Vérifiez si le formulaire est soumis
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Correction : vérification du token CSRF, comme dans add-sport.php
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $_SESSION['error'] = "Token CSRF invalide.";
+        header("Location: modify-sport.php?id_sport=$id_sport");
+        exit();
     }
 
-    $nomSport = post_text('nom_sport');
-    $erreur = valider_texte($nomSport, 'Le nom du sport');
+    // Assurez-vous d'obtenir des données sécurisées et filtrées
+    // Correction : nom enregistré tel qu'il a été tapé, sans les espaces autour (voir add-sport.php)
+    $nomSport = trim((string) filter_input(INPUT_POST, 'nomSport'));
 
-    // Doublon : un AUTRE sport (id différent) porte déjà ce nom
-    if ($erreur === null) {
-        $stmt = $connexion->prepare('SELECT COUNT(*) FROM SPORT WHERE nom_sport = :nom AND id_sport <> :id');
-        $stmt->execute([':nom' => $nomSport, ':id' => $idSport]);
-        if ($stmt->fetchColumn() > 0) {
-            $erreur = 'Un autre sport porte déjà ce nom.';
+    // Vérifiez si le nom du sport est vide
+    if (empty($nomSport)) {
+        $_SESSION['error'] = "Le nom du sport ne peut pas être vide.";
+        header("Location: modify-sport.php?id_sport=$id_sport");
+        exit();
+    }
+
+    try {
+        // Vérifiez si le sport existe déjà
+        $queryCheck = "SELECT id_sport FROM SPORT WHERE nom_sport = :nomSport AND id_sport <> :idSport";
+        $statementCheck = $connexion->prepare($queryCheck);
+        $statementCheck->bindParam(":nomSport", $nomSport, PDO::PARAM_STR);
+        $statementCheck->bindParam(":idSport", $id_sport, PDO::PARAM_INT);
+        $statementCheck->execute();
+
+        if ($statementCheck->rowCount() > 0) {
+            $_SESSION['error'] = "Le sport existe déjà.";
+            header("Location: modify-sport.php?id_sport=$id_sport");
+            exit();
         }
-    }
 
-    if ($erreur === null) {
-        try {
-            $stmt = $connexion->prepare('UPDATE SPORT SET nom_sport = :nom WHERE id_sport = :id');
-            $stmt->execute([':nom' => $nomSport, ':id' => $idSport]);
-            flash('success', "Le sport « $nomSport » a été modifié.");
-            redirect('manage-sports.php');
-        } catch (PDOException $e) {
-            if (!est_doublon($e)) {
-                throw $e;
-            }
-            $erreur = 'Un autre sport porte déjà ce nom.';
+        // Requête pour mettre à jour le sport
+        $query = "UPDATE SPORT SET nom_sport = :nomSport WHERE id_sport = :idSport";
+        $statement = $connexion->prepare($query);
+        $statement->bindParam(":nomSport", $nomSport, PDO::PARAM_STR);
+        $statement->bindParam(":idSport", $id_sport, PDO::PARAM_INT);
+
+        // Exécutez la requête
+        if ($statement->execute()) {
+            $_SESSION['success'] = "Le sport a été modifié avec succès.";
+            header("Location: manage-sports.php");
+            exit();
+        } else {
+            $_SESSION['error'] = "Erreur lors de la modification du sport.";
+            header("Location: modify-sport.php?id_sport=$id_sport");
+            exit();
         }
+    } catch (PDOException $e) {
+        // Correction : le message SQL va dans le journal du serveur, pas à l'écran
+        error_log("Erreur PDO : " . $e->getMessage());
+        $_SESSION['error'] = "Erreur lors de la modification du sport.";
+        header("Location: modify-sport.php?id_sport=$id_sport");
+        exit();
     }
-
-    flash('error', $erreur);
 }
-
-require __DIR__ . '/../../../includes/head.php';
-require __DIR__ . '/../../../includes/nav-admin.php';
 ?>
+
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../../css/normalize.css">
+    <link rel="stylesheet" href="../../../css/styles-computer.css">
+    <link rel="stylesheet" href="../../../css/styles-responsive.css">
+    <link rel="shortcut icon" href="../../../img/favicon.ico" type="image/x-icon">
+    <title>Modifier un Sport - Jeux Olympiques - Los Angeles 2028</title>
+</head>
+
+<body>
+    <header>
+        <nav>
+            <!-- Menu vers les pages sports, events, et results -->
+            <!-- Correction : liens vers le dossier de chaque rubrique (ils pointaient tous vers admin-sports),
+                 ajout des rubriques Administrateurs et Genres (questions 13 et 18) -->
+            <ul class="menu">
+                <li><a href="../admin.php">Accueil Administration</a></li>
+                <li><a href="../admin-users/manage-users.php">Gestion Administrateurs</a></li>
+                <li><a href="../admin-sports/manage-sports.php">Gestion Sports</a></li>
+                <li><a href="../admin-places/manage-places.php">Gestion Lieux</a></li>
+                <li><a href="../admin-countries/manage-countries.php">Gestion Pays</a></li>
+                <li><a href="../admin-events/manage-events.php">Gestion Calendrier</a></li>
+                <li><a href="../admin-athletes/manage-athletes.php">Gestion Athlètes</a></li>
+                <li><a href="../admin-genders/manage-genders.php">Gestion Genres</a></li>
+                <li><a href="../admin-results/manage-results.php">Gestion Résultats</a></li>
+                <li><a href="../../logout.php">Déconnexion</a></li>
+            </ul>
+        </nav>
+    </header>
+
     <main>
-        <h1>Modifier un sport</h1>
-        <?php show_flash(); ?>
-        <form action="modify-sport.php?id_sport=<?= $idSport ?>" method="post">
-            <?= csrf_field() ?>
-            <label for="nom_sport">Nom du sport :</label>
-            <input type="text" name="nom_sport" id="nom_sport" maxlength="255" value="<?= e($nomSport) ?>" required>
-            <input type="submit" value="Enregistrer les modifications">
+        <h1>Modifier un Sport</h1>
+        
+        <!-- Affichage des messages d'erreur ou de succès -->
+        <?php
+        if (isset($_SESSION['error'])) {
+            echo '<p style="color: red;">' . $_SESSION['error'] . '</p>';
+            unset($_SESSION['error']);
+        }
+        if (isset($_SESSION['success'])) {
+            echo '<p style="color: green;">' . $_SESSION['success'] . '</p>';
+            unset($_SESSION['success']);
+        }
+        ?>
+
+        <form action="modify-sport.php?id_sport=<?php echo $id_sport; ?>" method="post"
+            onsubmit="return confirm('Êtes-vous sûr de vouloir modifier ce sport?')">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+            <label for="nomSport">Nom du Sport :</label>
+            <input type="text" name="nomSport" id="nomSport"
+                value="<?php echo htmlspecialchars($sport['nom_sport']); ?>" required>
+            <input type="submit" value="Modifier le Sport">
         </form>
-        <p class="paragraph-link"><a class="link-home" href="manage-sports.php">Retour à la gestion des sports</a></p>
+
+        <p class="paragraph-link">
+            <a class="link-home" href="manage-sports.php">Retour à la gestion des sports</a>
+        </p>
     </main>
-<?php require __DIR__ . '/../../../includes/footer.php'; ?>
+
+    <footer>
+        <figure>
+            <img src="../../../img/logo-jo.png" alt="logo Jeux Olympiques - Los Angeles 2028">
+        </figure>
+    </footer>
+</body>
+
+</html>

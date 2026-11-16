@@ -1,32 +1,42 @@
 <?php
-/**
- * Connexion unique à la base de données via PDO.
- *
- * Les identifiants sont lus dans config.php (hors dépôt Git).
- * Options retenues :
- *  - ERRMODE_EXCEPTION   : toute erreur SQL lève une exception (rien n'échoue en silence) ;
- *  - FETCH_ASSOC         : les lignes sont renvoyées sous forme de tableaux associatifs ;
- *  - EMULATE_PREPARES off : de vraies requêtes préparées côté serveur MySQL (anti-injection SQL).
- */
+// Paramètres de connexion à la base de données
+$host = "localhost";
+$port = 3306;
+$dbname = "kansietoko_yuung_jo2028"; // Base créée à la question 10 (« nom_prenom_jo2028 »)
+$username = "root";
+$password = "root";
 
-$config = $config ?? require __DIR__ . '/config.php';
+// Correction : en ligne (InfinityFree), les identifiants ne sont pas les mêmes qu'en local.
+// Ils sont lus dans config.php, un fichier exclu de GitHub (.gitignore) : le mot de passe de la base n'est jamais publié.
+if (file_exists(__DIR__ . "/config.php")) {
+    $config = require __DIR__ . "/config.php";
+    $host = $config['host'];
+    $port = $config['port'];
+    $dbname = $config['dbname'];
+    $username = $config['user'];
+    $password = $config['password'];
+}
 
-$dsn = sprintf(
-    'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
-    $config['host'],
-    $config['port'],
-    $config['dbname']
-);
+// Tests PHPUnit (mission 7) : le serveur de test travaille sur une copie de la base, suffixée par _test
+if (getenv("JO2028_TEST") === "1") {
+    $dbname .= "_test";
+}
 
 try {
-    $connexion = new PDO($dsn, $config['user'], $config['password'], [
-        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES   => false,
-    ]);
+    // Création d'une nouvelle connexion PDO
+    // Correction : utf8mb4 au lieu de utf8 (dans MySQL, utf8 est un UTF-8 incomplet, limité à 3 octets)
+    $connexion = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $username, $password);
+
+    // Définir l'attribut PDO pour générer des exceptions en cas d'erreur
+    $connexion->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    // Le détail technique va dans le journal du serveur, jamais à l'écran du visiteur
-    error_log('Connexion à la base impossible : ' . $e->getMessage());
-    http_response_code(503);
-    exit('Service momentanément indisponible. Merci de réessayer plus tard.');
+    // Correction : le message technique (nom du serveur, utilisateur...) n'est plus affiché au visiteur.
+    // Il est écrit dans le journal du serveur, et le script s'arrête : sans connexion, aucune page ne peut fonctionner.
+    error_log("Erreur de connexion à la base de données : " . $e->getMessage());
+    exit("Erreur de connexion à la base de données. Veuillez réessayer plus tard.");
 }
+// Afficher les erreurs en PHP
+// (fonctionne à condition d’avoir activé l’option en local)
+error_reporting(E_ALL);
+ini_set("display_errors", 1);
+?>

@@ -10,7 +10,7 @@ Seuls les fichiers nécessaires au fonctionnement du site sont envoyés (archive
 
 | Envoyé | Non envoyé (développement uniquement) |
 |---|---|
-| `.htaccess`, `index.php`, `css/`, `img/`, `includes/`, `pages/` | `tests/`, `vendor/`, `docs/` |
+| `.htaccess`, `index.php`, `css/`, `img/`, `pages/` | `tests/`, `vendor/`, `docs/` |
 | `database/auth.php`, `database/database.php`, `database/config.example.php` | scripts SQL, `composer.*`, `phpunit.xml`, `lancer-tests.bat` |
 
 ## Étape 1 : créer le compte et l'hébergement
@@ -69,7 +69,7 @@ return [
 ];
 ```
 
-`config.php` n'est jamais publié sur GitHub (il est dans `.gitignore`) : il est créé directement sur chaque serveur. Avec `debug` à `false`, une erreur affiche un message générique au lieu de détails exploitables par un attaquant.
+`config.php` n'est jamais publié sur GitHub (il est dans `.gitignore`) : il est créé directement sur chaque serveur. `database.php` le lit s'il existe ; sinon, il garde les identifiants locaux de MAMP. La clé `debug` est conservée pour compatibilité : les erreurs SQL sont de toute façon écrites dans le journal du serveur, et le visiteur ne voit qu'un message générique.
 
 ## Étape 6 : activer HTTPS
 
@@ -86,7 +86,7 @@ Sur un sous-domaine gratuit d'InfinityFree (`*.infinityfree.me`), HTTPS fonction
 | Connexion avec le compte `admin` et son mot de passe personnel | Accès au back-office |
 | Ajout, modification, suppression d'un sport | Messages de confirmation, données à jour sur les pages publiques |
 | `https://<site>/database/deploy-production.sql` | 403 Accès refusé |
-| `https://<site>/includes/bootstrap.php` | 404 Page introuvable |
-| `https://<site>/pages/admin/admin.php` sans connexion | Redirection vers la page de connexion |
+| `https://<site>/database/config.php` | 403 Accès refusé |
+| `https://<site>/pages/admin/admin.php` sans connexion | Redirection vers l'accueil du site |
 
 Une fois la recette validée : reporter l'adresse du site dans la fiche descriptive E6 (rubrique « Site web ») et dans le `README.md`.

@@ -1,60 +1,141 @@
 <?php
-/** Gestion des genres : ajout. */
-$racine = '../../../';
-$titre = 'Ajouter un genre';
-require_once __DIR__ . '/../../../includes/bootstrap.php';
-require_admin($racine);
+session_start();
+require_once("../../../database/database.php");
 
-$nomGenre = '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!csrf_verify()) {
-        flash('error', 'Session expirée ou requête invalide. Veuillez réessayer.');
-        redirect('add-gender.php');
-    }
-
-    $nomGenre = post_text('nom_genre');
-    $erreur = valider_texte($nomGenre, 'Le nom du genre');
-
-    // Contrôle des doublons avant l'insertion
-    if ($erreur === null) {
-        $stmt = $connexion->prepare('SELECT COUNT(*) FROM GENRE WHERE nom_genre = :nom');
-        $stmt->execute([':nom' => $nomGenre]);
-        if ($stmt->fetchColumn() > 0) {
-            $erreur = 'Ce genre existe déjà.';
-        }
-    }
-
-    if ($erreur === null) {
-        try {
-            $stmt = $connexion->prepare('INSERT INTO GENRE (nom_genre) VALUES (:nom)');
-            $stmt->execute([':nom' => $nomGenre]);
-            flash('success', "Le genre « $nomGenre » a été ajouté.");
-            redirect('manage-genders.php');
-        } catch (PDOException $e) {
-            // Filet de sécurité : la contrainte UNIQUE de la base bloque un doublon créé entre-temps
-            if (!est_doublon($e)) {
-                throw $e;
-            }
-            $erreur = 'Ce genre existe déjà.';
-        }
-    }
-
-    flash('error', $erreur);
+// Vérifiez si l'utilisateur est connecté
+if (!isset($_SESSION['login'])) {
+    header('Location: ../../../index.php');
+    exit();
 }
 
-require __DIR__ . '/../../../includes/head.php';
-require __DIR__ . '/../../../includes/nav-admin.php';
+// Générer un token CSRF si ce n'est pas déjà fait
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32)); // Génère un token CSRF sécurisé
+}
+
+// Vérifiez si le formulaire est soumis
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Récupération des champs : le texte est gardé tel qu'il a été tapé, sans les espaces autour (trim).
+    // La protection XSS se fait à l'affichage, avec htmlspecialchars().
+    $nomGenre = trim((string) filter_input(INPUT_POST, 'nomGenre'));
+
+    // Vérification du token CSRF
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $_SESSION['error'] = "Token CSRF invalide.";
+        header("Location: add-gender.php");
+        exit();
+    }
+
+    // Vérifiez si le champ est vide
+    if (empty($nomGenre)) {
+        $_SESSION['error'] = "Le nom du genre ne peut pas être vide.";
+        header("Location: add-gender.php");
+        exit();
+    }
+
+    try {
+        // Vérifiez si le genre existe déjà (pas de doublon : deux genres ne peuvent pas avoir le même nom)
+        $queryCheck = "SELECT id_genre FROM GENRE WHERE nom_genre = :nomGenre";
+        $statementCheck = $connexion->prepare($queryCheck);
+        $statementCheck->bindParam(":nomGenre", $nomGenre, PDO::PARAM_STR);
+        $statementCheck->execute();
+
+        if ($statementCheck->rowCount() > 0) {
+            $_SESSION['error'] = "Le genre existe déjà.";
+            header("Location: add-gender.php");
+            exit();
+        } else {
+            // Requête pour ajouter un genre (requête préparée : les valeurs sont envoyées à part, pas d'injection SQL)
+            $query = "INSERT INTO GENRE (nom_genre) VALUES (:nomGenre)";
+            $statement = $connexion->prepare($query);
+            $statement->bindParam(":nomGenre", $nomGenre, PDO::PARAM_STR);
+
+            // Exécutez la requête
+            if ($statement->execute()) {
+                $_SESSION['success'] = "Le genre a été ajouté avec succès.";
+                header("Location: manage-genders.php");
+                exit();
+            } else {
+                $_SESSION['error'] = "Erreur lors de l'ajout du genre.";
+                header("Location: add-gender.php");
+                exit();
+            }
+        }
+    } catch (PDOException $e) {
+        // Le message SQL va dans le journal du serveur, pas à l'écran
+        error_log("Erreur PDO : " . $e->getMessage());
+        $_SESSION['error'] = "Erreur lors de l'ajout du genre.";
+        header("Location: add-gender.php");
+        exit();
+    }
+}
+
+// Afficher les erreurs en PHP (fonctionne à condition d’avoir activé l’option en local)
+error_reporting(E_ALL);
+ini_set("display_errors", 1);
 ?>
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../../css/normalize.css">
+    <link rel="stylesheet" href="../../../css/styles-computer.css">
+    <link rel="stylesheet" href="../../../css/styles-responsive.css">
+    <link rel="shortcut icon" href="../../../img/favicon.ico" type="image/x-icon">
+    <title>Ajouter un Genre - Jeux Olympiques - Los Angeles 2028</title>
+</head>
+
+<body>
+    <header>
+        <nav>
+            <!-- Menu de l'administration -->
+            <ul class="menu">
+                <li><a href="../admin.php">Accueil Administration</a></li>
+                <li><a href="../admin-users/manage-users.php">Gestion Administrateurs</a></li>
+                <li><a href="../admin-sports/manage-sports.php">Gestion Sports</a></li>
+                <li><a href="../admin-places/manage-places.php">Gestion Lieux</a></li>
+                <li><a href="../admin-countries/manage-countries.php">Gestion Pays</a></li>
+                <li><a href="../admin-events/manage-events.php">Gestion Calendrier</a></li>
+                <li><a href="../admin-athletes/manage-athletes.php">Gestion Athlètes</a></li>
+                <li><a href="../admin-genders/manage-genders.php">Gestion Genres</a></li>
+                <li><a href="../admin-results/manage-results.php">Gestion Résultats</a></li>
+                <li><a href="../../logout.php">Déconnexion</a></li>
+            </ul>
+        </nav>
+    </header>
+
     <main>
-        <h1>Ajouter un genre</h1>
-        <?php show_flash(); ?>
-        <form action="add-gender.php" method="post">
-            <?= csrf_field() ?>
-            <label for="nom_genre">Nom du genre :</label>
-            <input type="text" name="nom_genre" id="nom_genre" maxlength="255" value="<?= e($nomGenre) ?>" required>
-            <input type="submit" value="Ajouter le genre">
+        <h1>Ajouter un Genre</h1>
+        <?php
+        // Affichage des messages d'erreur ou de succès
+        if (isset($_SESSION['error'])) {
+            echo '<p style="color: red;">' . htmlspecialchars($_SESSION['error'], ENT_QUOTES, 'UTF-8') . '</p>';
+            unset($_SESSION['error']);
+        }
+        if (isset($_SESSION['success'])) {
+            echo '<p style="color: green;">' . htmlspecialchars($_SESSION['success'], ENT_QUOTES, 'UTF-8') . '</p>';
+            unset($_SESSION['success']);
+        }
+        ?>
+        <form action="add-gender.php" method="post" onsubmit="return confirm('Êtes-vous sûr de vouloir ajouter ce genre ?')">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+            <label for="nomGenre">Nom du Genre :</label>
+            <input type="text" name="nomGenre" id="nomGenre" maxlength="255" required>
+            <input type="submit" value="Ajouter le Genre">
         </form>
-        <p class="paragraph-link"><a class="link-home" href="manage-genders.php">Retour à la gestion des genres</a></p>
+        <p class="paragraph-link">
+            <a class="link-home" href="manage-genders.php">Retour à la gestion des genres</a>
+        </p>
     </main>
-<?php require __DIR__ . '/../../../includes/footer.php'; ?>
+
+    <footer>
+        <figure>
+            <img src="../../../img/logo-jo.png" alt="logo Jeux Olympiques - Los Angeles 2028">
+        </figure>
+    </footer>
+
+</body>
+
+</html>

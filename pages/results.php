@@ -1,50 +1,95 @@
-<?php
-/**
- * Page publique : résultats des épreuves.
- * Correctif : noms de tables en majuscules, conformes au schéma (serveurs Linux).
- */
-$racine = '../';
-$titre = 'Résultats';
-require_once __DIR__ . '/../includes/bootstrap.php';
+<!DOCTYPE html>
+<html lang="fr">
 
-$resultats = $connexion->query(
-    "SELECT sp.nom_sport, ep.nom_epreuve, at.nom_athlete, at.prenom_athlete, pa.nom_pays, pt.resultat
-     FROM PARTICIPER pt
-     INNER JOIN EPREUVE ep ON ep.id_epreuve = pt.id_epreuve
-     INNER JOIN SPORT   sp ON sp.id_sport   = ep.id_sport
-     INNER JOIN ATHLETE at ON at.id_athlete = pt.id_athlete
-     INNER JOIN PAYS    pa ON pa.id_pays    = at.id_pays
-     ORDER BY sp.nom_sport, ep.nom_epreuve, at.nom_athlete, at.prenom_athlete"
-)->fetchAll();
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../css/normalize.css">
+    <link rel="stylesheet" href="../css/styles-computer.css">
+    <link rel="stylesheet" href="../css/styles-responsive.css">
+    <link rel="shortcut icon" href="../img/favicon.ico" type="image/x-icon">
+    <title>Résultats sportifs - Jeux Olympiques - Los Angeles 2028</title>
+</head>
 
-require __DIR__ . '/../includes/head.php';
-require __DIR__ . '/../includes/nav-public.php';
-?>
+<body>
+    <header>
+        <nav>
+            <!-- Menu vers les pages sports, events, et results -->
+            <ul class="menu">
+                <li><a href="../index.php">Accueil</a></li>
+                <li><a href="sports.php">Sports</a></li>
+                <li><a href="events.php">Calendrier des évènements</a></li>
+                <li><a href="results.php">Résultats</a></li>
+                <li><a href="login.php">Accès administrateur</a></li>
+            </ul>
+        </nav>
+    </header>
     <main>
         <h1>Résultats des épreuves</h1>
-        <?php if ($resultats): ?>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr><th>Sport</th><th>Épreuve</th><th>Nom</th><th>Prénom</th><th>Pays</th><th>Résultat</th></tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($resultats as $r): ?>
-                            <tr>
-                                <td><?= e($r['nom_sport']) ?></td>
-                                <td><?= e($r['nom_epreuve']) ?></td>
-                                <td><?= e($r['nom_athlete']) ?></td>
-                                <td><?= e($r['prenom_athlete']) ?></td>
-                                <td><?= e($r['nom_pays']) ?></td>
-                                <td><?= e($r['resultat']) ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        <?php else: ?>
-            <p>Aucun résultat publié pour le moment.</p>
-        <?php endif; ?>
-        <p class="paragraph-link"><a class="link-home" href="../index.php">Retour accueil</a></p>
+
+        <?php
+        require_once("../database/database.php");
+
+        try {
+            // Requête pour récupérer la liste des sports depuis la base de données
+            // Correction : noms des tables en majuscules, comme dans db-jo.sql (sensible à la casse sur un serveur Linux)
+            $query = "SELECT part.resultat, sp.nom_sport, at.nom_athlete, at.prenom_athlete, pa.nom_pays 
+            FROM PARTICIPER part
+            INNER JOIN EPREUVE ep ON part.id_epreuve = ep.id_epreuve
+            INNER JOIN SPORT sp ON ep.id_sport = sp.id_sport
+            INNER JOIN ATHLETE at ON part.id_athlete = at.id_athlete
+            INNER JOIN PAYS pa ON at.id_pays = pa.id_pays
+            ORDER BY sp.nom_sport, at.nom_athlete, at.prenom_athlete";
+            $statement = $connexion->prepare($query);
+            $statement->execute();
+
+            // Vérifier s'il y a des résultats
+            if ($statement->rowCount() > 0) {
+                echo "<table>";
+                echo "<tr>
+                <th class='color'>Sports</th>
+                <th class='color'>Noms ahtlète</th>
+                <th class='color'>Prénoms ahtlète</th>
+                <th class='color'>Pays</th>
+                <th class='color'>Résultats</th>
+                </tr>";
+
+                // Afficher les données dans un tableau
+                while ($row = $statement->fetch(PDO::FETCH_ASSOC)) {
+                    echo "<tr>";
+                    echo "<td>" . htmlspecialchars($row['nom_sport'], ENT_QUOTES, 'UTF-8') . "</td>";
+                    echo "<td>" . htmlspecialchars($row['nom_athlete'], ENT_QUOTES, 'UTF-8') . "</td>";
+                    echo "<td>" . htmlspecialchars($row['prenom_athlete'], ENT_QUOTES, 'UTF-8') . "</td>";
+                    echo "<td>" . htmlspecialchars($row['nom_pays'], ENT_QUOTES, 'UTF-8') . "</td>";
+                    echo "<td>" . htmlspecialchars($row['resultat'], ENT_QUOTES, 'UTF-8') . "</td>";
+                    echo "</tr>";
+                }
+
+                echo "</table>";
+            } else {
+                echo "<p>Aucun sport trouvé.</p>";
+            }
+        } catch (PDOException $e) {
+            // Gestion d'erreur améliorée
+            echo "<p style='color: red;'>Erreur : Impossible de récupérer les sports. Veuillez réessayer plus tard.</p>";
+            error_log("Erreur PDO : " . $e->getMessage()); // Log de l'erreur dans un fichier serveur pour débogage
+        }
+
+        // Définir le niveau d'affichage des erreurs (utile en phase de développement)
+        error_reporting(E_ALL);
+        ini_set("display_errors", 1);
+        ?>
+
+        <p class="paragraph-link">
+            <a class="link-home" href="../index.php">Retour Accueil</a>
+        </p>
+
     </main>
-<?php require __DIR__ . '/../includes/footer.php'; ?>
+    <footer>
+        <figure>
+            <img src="../img/logo-jo.png" alt="logo Jeux Olympiques - Los Angeles 2028">
+        </figure>
+    </footer>
+</body>
+
+</html>

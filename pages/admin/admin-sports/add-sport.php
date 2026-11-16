@@ -1,60 +1,147 @@
 <?php
-/** Gestion des sports : ajout. */
-$racine = '../../../';
-$titre = 'Ajouter un sport';
-require_once __DIR__ . '/../../../includes/bootstrap.php';
-require_admin($racine);
+session_start();
+require_once("../../../database/database.php");
 
-$nomSport = '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!csrf_verify()) {
-        flash('error', 'Session expirée ou requête invalide. Veuillez réessayer.');
-        redirect('add-sport.php');
-    }
-
-    $nomSport = post_text('nom_sport');
-    $erreur = valider_texte($nomSport, 'Le nom du sport');
-
-    // Contrôle des doublons avant l'insertion
-    if ($erreur === null) {
-        $stmt = $connexion->prepare('SELECT COUNT(*) FROM SPORT WHERE nom_sport = :nom');
-        $stmt->execute([':nom' => $nomSport]);
-        if ($stmt->fetchColumn() > 0) {
-            $erreur = 'Ce sport existe déjà.';
-        }
-    }
-
-    if ($erreur === null) {
-        try {
-            $stmt = $connexion->prepare('INSERT INTO SPORT (nom_sport) VALUES (:nom)');
-            $stmt->execute([':nom' => $nomSport]);
-            flash('success', "Le sport « $nomSport » a été ajouté.");
-            redirect('manage-sports.php');
-        } catch (PDOException $e) {
-            // Filet de sécurité : la contrainte UNIQUE de la base bloque un doublon créé entre-temps
-            if (!est_doublon($e)) {
-                throw $e;
-            }
-            $erreur = 'Ce sport existe déjà.';
-        }
-    }
-
-    flash('error', $erreur);
+// Vérifiez si l'utilisateur est connecté
+if (!isset($_SESSION['login'])) {
+    header('Location: ../../../index.php');
+    exit();
 }
 
-require __DIR__ . '/../../../includes/head.php';
-require __DIR__ . '/../../../includes/nav-admin.php';
+// Générer un token CSRF si ce n'est pas déjà fait
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32)); // Génère un token CSRF sécurisé
+}
+
+// Vérifiez si le formulaire est soumis
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Assurez-vous d'obtenir des données sécurisées et filtrées
+    // Correction : le nom est enregistré tel qu'il a été tapé (sans les espaces autour, avec trim).
+    // FILTER_SANITIZE_SPECIAL_CHARS enregistrait « Tir à l&#39;arc » en base, puis htmlspecialchars() l'encodait
+    // une deuxième fois à l'affichage. La protection XSS se fait une seule fois, à l'affichage, avec htmlspecialchars().
+    $nomSport = trim((string) filter_input(INPUT_POST, 'nomSport'));
+
+    // Vérification du token CSRF
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $_SESSION['error'] = "Token CSRF invalide.";
+        header("Location: add-sport.php");
+        exit();
+    }
+
+    // Vérifiez si le nom du sport est vide
+    if (empty($nomSport)) {
+        $_SESSION['error'] = "Le nom du sport ne peut pas être vide.";
+        header("Location: add-sport.php");
+        exit();
+    }
+
+    try {
+        // Vérifiez si le sport existe déjà
+        $queryCheck = "SELECT id_sport FROM SPORT WHERE nom_sport = :nomSport";
+        $statementCheck = $connexion->prepare($queryCheck);
+        $statementCheck->bindParam(":nomSport", $nomSport, PDO::PARAM_STR);
+        $statementCheck->execute();
+
+        if ($statementCheck->rowCount() > 0) {
+            $_SESSION['error'] = "Le sport existe déjà.";
+            header("Location: add-sport.php");
+            exit();
+        } else {
+            // Requête pour ajouter un sport
+            $query = "INSERT INTO SPORT (nom_sport) VALUES (:nomSport)";
+            $statement = $connexion->prepare($query);
+            $statement->bindParam(":nomSport", $nomSport, PDO::PARAM_STR);
+
+            // Exécutez la requête
+            if ($statement->execute()) {
+                $_SESSION['success'] = "Le sport a été ajouté avec succès.";
+                header("Location: manage-sports.php");
+                exit();
+            } else {
+                $_SESSION['error'] = "Erreur lors de l'ajout du sport.";
+                header("Location: add-sport.php");
+                exit();
+            }
+        }
+    } catch (PDOException $e) {
+        // Correction : le message SQL n'est plus montré (il révèle la structure de la base), il va dans le journal du serveur
+        error_log("Erreur PDO : " . $e->getMessage());
+        $_SESSION['error'] = "Erreur lors de l'ajout du sport.";
+        header("Location: add-sport.php");
+        exit();
+    }
+}
+
+// Afficher les erreurs en PHP (fonctionne à condition d’avoir activé l’option en local)
+error_reporting(E_ALL);
+ini_set("display_errors", 1);
 ?>
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../../css/normalize.css">
+    <link rel="stylesheet" href="../../../css/styles-computer.css">
+    <link rel="stylesheet" href="../../../css/styles-responsive.css">
+    <link rel="shortcut icon" href="../../../img/favicon.ico" type="image/x-icon">
+    <title>Ajouter un Sport - Jeux Olympiques - Los Angeles 2028</title>
+    <style>
+        /* Ajoutez votre style CSS ici */
+    </style>
+</head>
+
+<body>
+    <header>
+        <nav>
+            <!-- Menu vers les pages sports, events, et results -->
+            <!-- Correction : liens vers le dossier de chaque rubrique (ils pointaient tous vers admin-sports),
+                 ajout des rubriques Administrateurs et Genres (questions 13 et 18) -->
+            <ul class="menu">
+                <li><a href="../admin.php">Accueil Administration</a></li>
+                <li><a href="../admin-users/manage-users.php">Gestion Administrateurs</a></li>
+                <li><a href="../admin-sports/manage-sports.php">Gestion Sports</a></li>
+                <li><a href="../admin-places/manage-places.php">Gestion Lieux</a></li>
+                <li><a href="../admin-countries/manage-countries.php">Gestion Pays</a></li>
+                <li><a href="../admin-events/manage-events.php">Gestion Calendrier</a></li>
+                <li><a href="../admin-athletes/manage-athletes.php">Gestion Athlètes</a></li>
+                <li><a href="../admin-genders/manage-genders.php">Gestion Genres</a></li>
+                <li><a href="../admin-results/manage-results.php">Gestion Résultats</a></li>
+                <li><a href="../../logout.php">Déconnexion</a></li>
+            </ul>
+        </nav>
+    </header>
+
     <main>
-        <h1>Ajouter un sport</h1>
-        <?php show_flash(); ?>
-        <form action="add-sport.php" method="post">
-            <?= csrf_field() ?>
-            <label for="nom_sport">Nom du sport :</label>
-            <input type="text" name="nom_sport" id="nom_sport" maxlength="255" value="<?= e($nomSport) ?>" required>
-            <input type="submit" value="Ajouter le sport">
+        <h1>Ajouter un Sport</h1>
+        <?php
+        if (isset($_SESSION['error'])) {
+            echo '<p style="color: red;">' . htmlspecialchars($_SESSION['error'], ENT_QUOTES, 'UTF-8') . '</p>';
+            unset($_SESSION['error']);
+        }
+        if (isset($_SESSION['success'])) {
+            echo '<p style="color: green;">' . htmlspecialchars($_SESSION['success'], ENT_QUOTES, 'UTF-8') . '</p>';
+            unset($_SESSION['success']);
+        }
+        ?>
+        <form action="add-sport.php" method="post" onsubmit="return confirm('Êtes-vous sûr de vouloir ajouter ce sport ?')">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+            <label for="nomSport">Nom du Sport :</label>
+            <input type="text" name="nomSport" id="nomSport" required>
+            <input type="submit" value="Ajouter le Sport">
         </form>
-        <p class="paragraph-link"><a class="link-home" href="manage-sports.php">Retour à la gestion des sports</a></p>
+        <p class="paragraph-link">
+            <a class="link-home" href="manage-sports.php">Retour à la gestion des sports</a>
+        </p>
     </main>
-<?php require __DIR__ . '/../../../includes/footer.php'; ?>
+
+    <footer>
+        <figure>
+            <img src="../../../img/logo-jo.png" alt="logo Jeux Olympiques - Los Angeles 2028">
+        </figure>
+    </footer>
+
+</body>
+
+</html>

@@ -1,7 +1,6 @@
 <?php
 /**
- * Amorçage des tests : chargement automatique des classes de test,
- * puis des fonctions de l'application testées unitairement.
+ * Amorçage des tests : chargement automatique des classes de test.
  */
 $autoload = __DIR__ . '/../vendor/autoload.php';
 if (is_file($autoload)) {
@@ -14,6 +13,3 @@ if (is_file($autoload)) {
         }
     });
 }
-
-$_SESSION = [];                                  // les fonctions CSRF lisent la session
-require_once __DIR__ . '/../includes/security.php';

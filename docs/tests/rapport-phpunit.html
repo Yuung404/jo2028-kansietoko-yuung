@@ -54,7 +54,11 @@
         <h2>Administrateur (Tests\Fonctionnel\Administrateur)</h2>
         <ul>
             <li class="success">Ajouter un administrateur enregistre une empreinte Bcrypt</li>
+            <li class="success">Un login déjà utilisé est refusé</li>
+            <li class="success">Les deux mots de passe doivent être identiques</li>
+            <li class="success">Modifier un administrateur sans mot de passe garde l'ancienne empreinte</li>
             <li class="success">Un administrateur ne peut pas supprimer son propre compte</li>
+            <li class="success">Supprimer un autre administrateur</li>
         </ul>
         <h2>Authentification (Tests\Fonctionnel\Authentification)</h2>
         <ul>
@@ -63,13 +67,20 @@
             <li class="success">Un mauvais mot de passe est refusé avec un message générique</li>
             <li class="success">La déconnexion ferme l'accès au back-office</li>
         </ul>
+        <h2>Rubriques (Tests\Fonctionnel\Rubriques)</h2>
+        <ul>
+            <li class="success">Ajouter un lieu, puis refuser le même nom (question 14)</li>
+            <li class="success">Un code postal qui n'a pas 5 chiffres est refusé</li>
+            <li class="success">Un pays qui a des athlètes ne peut pas être supprimé (question 15)</li>
+            <li class="success">Ajouter une épreuve au calendrier, puis refuser le même créneau (question 16)</li>
+            <li class="success">Une date impossible est refusée (31 février)</li>
+            <li class="success">Ajouter un athlète, puis refuser le même athlète pour le même pays (question 17)</li>
+            <li class="success">Un athlète qui a un résultat ne peut pas être supprimé</li>
+            <li class="success">Modifier un genre (question 18)</li>
+            <li class="success">Ajouter, modifier puis supprimer un résultat (question 19)</li>
+        </ul>
         <h2>Securite (Tests\Unitaire\Securite)</h2>
         <ul>
-            <li class="success">L'échappement HTML neutralise une balise script (XSS)</li>
-            <li class="success">Le jeton CSRF est aléatoire (64 caractères) et stable pendant la session</li>
-            <li class="success">Une requête sans jeton CSRF est refusée</li>
-            <li class="success">Une requête avec un faux jeton CSRF est refusée</li>
-            <li class="success">Une requête avec le bon jeton CSRF est acceptée</li>
             <li class="success">Bcrypt produit une empreinte salée et vérifiable</li>
             <li class="success">Les empreintes du jeu d'essai correspondent aux mots de passe de l'annexe 2</li>
         </ul>
@@ -77,23 +88,14 @@
         <ul>
             <li class="success">Ajouter un sport</li>
             <li class="success">Un sport en double est refusé (majuscules et espaces ignorés)</li>
+            <li class="success">Un nom avec une apostrophe est enregistré et affiché correctement</li>
             <li class="success">Modifier un sport</li>
             <li class="success">La modification vers un nom déjà utilisé est refusée</li>
+            <li class="success">Une modification sans jeton CSRF est refusée</li>
             <li class="success">Supprimer un sport</li>
             <li class="success">Un sport utilisé par une épreuve ne peut pas être supprimé</li>
             <li class="success">Une suppression sans jeton CSRF ou par simple lien est refusée</li>
             <li class="success">Un nom de sport malveillant est affiché sans être exécuté (XSS)</li>
-        </ul>
-        <h2>Validation (Tests\Unitaire\Validation)</h2>
-        <ul>
-            <li class="success">Un texte obligatoire vide est refusé</li>
-            <li class="success">Un texte trop long est refusé</li>
-            <li class="success">Un texte valide est accepté (y compris 255 caractères accentués)</li>
-            <li class="success">La longueur compte les caractères et non les octets</li>
-            <li class="success">Les dates impossibles sont refusées (31 février, 29 février hors année bissextile)</li>
-            <li class="success">Les heures invalides sont refusées</li>
-            <li class="success">Le format du login est contrôlé</li>
-            <li class="success">Les règles du mot de passe sont appliquées (8 caractères min., 72 octets max., confirmation)</li>
         </ul>
     </body>
 </html>

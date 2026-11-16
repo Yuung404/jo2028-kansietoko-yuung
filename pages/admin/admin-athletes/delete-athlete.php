@@ -1,31 +1,73 @@
 <?php
-/** Gestion des athlètes : suppression (POST + CSRF), bloquée si l'athlète a des résultats. */
-$racine = '../../../';
-require_once __DIR__ . '/../../../includes/bootstrap.php';
-require_admin($racine);
+session_start();
+require_once("../../../database/database.php");
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !csrf_verify()) {
-    flash('error', 'Requête de suppression invalide.');
-    redirect('manage-athletes.php');
+// Vérifiez si l'utilisateur est connecté
+if (!isset($_SESSION['login'])) {
+    header('Location: ../../../index.php');
+    exit();
 }
 
-$idAthlete = input_id(INPUT_POST, 'id_athlete');
-if ($idAthlete === null) {
-    flash('error', 'Identifiant d\'athlète invalide.');
-    redirect('manage-athletes.php');
+// Protection CSRF : la suppression n'est acceptée qu'en POST, avec un token CSRF valide
+// (un simple lien GET pourrait être déclenché par un autre site à la place de l'administrateur)
+if ($_SERVER['REQUEST_METHOD'] != 'POST' || !isset($_POST['csrf_token'], $_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+    $_SESSION['error'] = "Requête de suppression invalide.";
+    header('Location: manage-athletes.php');
+    exit();
 }
 
-$stmt = $connexion->prepare('SELECT COUNT(*) FROM PARTICIPER WHERE id_athlete = :id');
-$stmt->execute([':id' => $idAthlete]);
-$nbResultats = (int) $stmt->fetchColumn();
-if ($nbResultats > 0) {
-    flash('error', "Suppression impossible : cet athlète a $nbResultats résultat(s) enregistré(s). Supprimez d'abord ces résultats.");
-    redirect('manage-athletes.php');
+// Vérifiez si l'ID de l'athlète est fourni
+if (!isset($_POST['id_athlete'])) {
+    $_SESSION['error'] = "ID de l'athlète manquant.";
+    header("Location: manage-athletes.php");
+    exit();
+} else {
+    $id_athlete = filter_input(INPUT_POST, 'id_athlete', FILTER_VALIDATE_INT);
+
+    // Vérifiez si l'ID de l'athlète est un entier valide
+    if ($id_athlete === false || $id_athlete === null) {
+        $_SESSION['error'] = "ID de l'athlète invalide.";
+        header("Location: manage-athletes.php");
+        exit();
+    } else {
+        try {
+            // Vérifiez que l'athlète n'est pas utilisé ailleurs (clé étrangère PARTICIPER.id_athlete).
+            // On compte d'abord, pour afficher un message clair au lieu d'une erreur SQL de clé étrangère.
+            $queryCheck = "SELECT COUNT(*) FROM PARTICIPER WHERE id_athlete = :id_athlete";
+            $statementCheck = $connexion->prepare($queryCheck);
+            $statementCheck->bindParam(':id_athlete', $id_athlete, PDO::PARAM_INT);
+            $statementCheck->execute();
+
+            if ($statementCheck->fetchColumn() > 0) {
+                $_SESSION['error'] = "Suppression impossible : cet athlète a au moins un résultat. Supprimez d'abord ses résultats.";
+                header('Location: manage-athletes.php');
+                exit();
+            }
+
+            // Préparez la requête SQL pour supprimer l'athlète
+            $sql = "DELETE FROM ATHLETE WHERE id_athlete = :id_athlete";
+            // Exécutez la requête SQL avec le paramètre
+            $statement = $connexion->prepare($sql);
+            $statement->bindParam(':id_athlete', $id_athlete, PDO::PARAM_INT);
+            $statement->execute();
+
+            // Message de succès
+            $_SESSION['success'] = "L'athlète a été supprimé avec succès.";
+
+            // Redirigez vers la liste après la suppression
+            header('Location: manage-athletes.php');
+            exit();
+        } catch (PDOException $e) {
+            // Le message SQL va dans le journal du serveur, pas à l'écran
+            error_log("Erreur PDO : " . $e->getMessage());
+            $_SESSION['error'] = "Erreur lors de la suppression de l'athlète.";
+            header('Location: manage-athletes.php');
+            exit();
+        }
+    }
 }
 
-$stmt = $connexion->prepare('DELETE FROM ATHLETE WHERE id_athlete = :id');
-$stmt->execute([':id' => $idAthlete]);
-
-flash($stmt->rowCount() === 1 ? 'success' : 'error',
-      $stmt->rowCount() === 1 ? 'L\'athlète a été supprimé.' : 'Athlète introuvable (déjà supprimé ?).');
-redirect('manage-athletes.php');
+// Afficher les erreurs en PHP (fonctionne à condition d’avoir activé l’option en local)
+error_reporting(E_ALL);
+ini_set("display_errors", 1);
+?>

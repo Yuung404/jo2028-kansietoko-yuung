@@ -1,59 +1,142 @@
 <?php
-/** Gestion des athlètes : liste. */
-$racine = '../../../';
-$titre = 'Gestion des athlètes';
-require_once __DIR__ . '/../../../includes/bootstrap.php';
-require_admin($racine);
+session_start();
 
-$athletes = $connexion->query(
-    'SELECT at.id_athlete, at.nom_athlete, at.prenom_athlete, pa.nom_pays, ge.nom_genre
-     FROM ATHLETE at
-     INNER JOIN PAYS  pa ON pa.id_pays  = at.id_pays
-     INNER JOIN GENRE ge ON ge.id_genre = at.id_genre
-     ORDER BY at.nom_athlete, at.prenom_athlete'
-)->fetchAll();
+// Vérifiez si l'utilisateur est connecté
+if (!isset($_SESSION['login'])) {
+    header('Location: ../../../index.php');
+    exit();
+}
 
-require __DIR__ . '/../../../includes/head.php';
-require __DIR__ . '/../../../includes/nav-admin.php';
+$login = $_SESSION['login'];
+$nom_utilisateur = $_SESSION['prenom_admin'];
+$prenom_utilisateur = $_SESSION['nom_admin'];
+
+// Générer un token CSRF si ce n'est pas déjà fait
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32)); // Génère un token CSRF sécurisé
+}
 ?>
+
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../../css/normalize.css">
+    <link rel="stylesheet" href="../../../css/styles-computer.css">
+    <link rel="stylesheet" href="../../../css/styles-responsive.css">
+    <link rel="shortcut icon" href="../../../img/favicon.ico" type="image/x-icon">
+    <title>Liste des Athlètes - Jeux Olympiques - Los Angeles 2028</title>
+</head>
+
+<body>
+    <header>
+        <nav>
+            <!-- Menu de l'administration -->
+            <ul class="menu">
+                <li><a href="../admin.php">Accueil Administration</a></li>
+                <li><a href="../admin-users/manage-users.php">Gestion Administrateurs</a></li>
+                <li><a href="../admin-sports/manage-sports.php">Gestion Sports</a></li>
+                <li><a href="../admin-places/manage-places.php">Gestion Lieux</a></li>
+                <li><a href="../admin-countries/manage-countries.php">Gestion Pays</a></li>
+                <li><a href="../admin-events/manage-events.php">Gestion Calendrier</a></li>
+                <li><a href="../admin-athletes/manage-athletes.php">Gestion Athlètes</a></li>
+                <li><a href="../admin-genders/manage-genders.php">Gestion Genres</a></li>
+                <li><a href="../admin-results/manage-results.php">Gestion Résultats</a></li>
+                <li><a href="../../logout.php">Déconnexion</a></li>
+            </ul>
+        </nav>
+    </header>
+
     <main>
-        <h1>Gestion des athlètes</h1>
-        <?php show_flash(); ?>
-        <p class="action-buttons"><a class="btn" href="add-athlete.php">Ajouter un athlète</a></p>
+        <h1>Liste des Athlètes</h1>
+        <?php
+        // Affichage des messages d'erreur ou de succès
+        if (isset($_SESSION['error'])) {
+            echo '<p style="color: red;">' . htmlspecialchars($_SESSION['error'], ENT_QUOTES, 'UTF-8') . '</p>';
+            unset($_SESSION['error']);
+        }
+        if (isset($_SESSION['success'])) {
+            echo '<p style="color: green;">' . htmlspecialchars($_SESSION['success'], ENT_QUOTES, 'UTF-8') . '</p>';
+            unset($_SESSION['success']);
+        }
+        ?>
+        <div class="action-buttons">
+            <button onclick="openAddAthleteForm()">Ajouter un Athlète</button>
+        </div>
 
-        <?php if ($athletes): ?>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr><th>Nom</th><th>Prénom</th><th>Pays</th><th>Genre</th><th>Modifier</th><th>Supprimer</th></tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($athletes as $at): ?>
-                            <tr>
-                                <td><?= e($at['nom_athlete']) ?></td>
-                                <td><?= e($at['prenom_athlete']) ?></td>
-                                <td><?= e($at['nom_pays']) ?></td>
-                                <td><?= e($at['nom_genre']) ?></td>
-                                <td class="actions">
-                                    <a class="btn btn-small" href="modify-athlete.php?id_athlete=<?= (int) $at['id_athlete'] ?>">Modifier</a>
-                                </td>
-                                <td class="actions">
-                                    <form class="inline-form" action="delete-athlete.php" method="post"
-                                          onsubmit="return confirm('Supprimer l\'athlète « <?= e(addslashes($at['prenom_athlete'] . ' ' . $at['nom_athlete'])) ?> » ?');">
-                                        <?= csrf_field() ?>
-                                        <input type="hidden" name="id_athlete" value="<?= (int) $at['id_athlete'] ?>">
-                                        <button type="submit" class="btn btn-small btn-danger">Supprimer</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        <?php else: ?>
-            <p>Aucun athlète enregistré.</p>
-        <?php endif; ?>
+        <!-- Tableau des athlètes -->
+        <?php
+        require_once("../../../database/database.php");
 
-        <p class="paragraph-link"><a class="link-home" href="../admin.php">Accueil administration</a></p>
+        try {
+            // Requête pour récupérer la liste des athlètes depuis la base de données
+            $query = "SELECT at.id_athlete, at.nom_athlete, at.prenom_athlete, pa.nom_pays, ge.nom_genre FROM ATHLETE at INNER JOIN PAYS pa ON at.id_pays = pa.id_pays INNER JOIN GENRE ge ON at.id_genre = ge.id_genre ORDER BY at.nom_athlete, at.prenom_athlete";
+            $statement = $connexion->prepare($query);
+            $statement->execute();
+
+            // Vérifier s'il y a des résultats
+            if ($statement->rowCount() > 0) {
+                echo "<table><tr><th>Nom</th><th>Prénom</th><th>Pays</th><th>Genre</th><th>Modifier</th><th>Supprimer</th></tr>";
+
+                // Afficher les données dans un tableau
+                while ($row = $statement->fetch(PDO::FETCH_ASSOC)) {
+                    echo "<tr>";
+                    echo "<td>" . htmlspecialchars($row['nom_athlete'], ENT_QUOTES, 'UTF-8') . "</td>";
+                    echo "<td>" . htmlspecialchars($row['prenom_athlete'], ENT_QUOTES, 'UTF-8') . "</td>";
+                    echo "<td>" . htmlspecialchars($row['nom_pays'], ENT_QUOTES, 'UTF-8') . "</td>";
+                    echo "<td>" . htmlspecialchars($row['nom_genre'], ENT_QUOTES, 'UTF-8') . "</td>";
+                    echo "<td><button onclick='openModifyAthleteForm(" . (int) $row['id_athlete'] . ")'>Modifier</button></td>";
+                    echo "<td><button onclick='deleteAthleteConfirmation(" . (int) $row['id_athlete'] . ")'>Supprimer</button></td>";
+                    echo "</tr>";
+                }
+
+                echo "</table>";
+            } else {
+                echo "<p>Aucun athlète trouvé.</p>";
+            }
+        } catch (PDOException $e) {
+            // Message générique pour le visiteur, détail technique dans le journal du serveur
+            echo "<p style='color: red;'>Erreur : Impossible de récupérer les athlètes. Veuillez réessayer plus tard.</p>";
+            error_log("Erreur PDO : " . $e->getMessage());
+        }
+        ?>
+
+        <!-- Formulaire caché, envoyé par deleteAthleteConfirmation() : la suppression part en POST avec le token CSRF -->
+        <form id="form-supprimer" action="delete-athlete.php" method="post" style="display: none;">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+            <input type="hidden" name="id_athlete" id="id_athlete_supprimer">
+        </form>
+
+        <p class="paragraph-link">
+            <a class="link-home" href="../admin.php">Accueil administration</a>
+        </p>
     </main>
-<?php require __DIR__ . '/../../../includes/footer.php'; ?>
+
+    <footer>
+        <figure>
+            <img src="../../../img/logo-jo.png" alt="logo Jeux Olympiques - Los Angeles 2028">
+        </figure>
+    </footer>
+
+    <script>
+        function openAddAthleteForm() {
+            window.location.href = 'add-athlete.php';
+        }
+
+        function openModifyAthleteForm(id_athlete) {
+            window.location.href = 'modify-athlete.php?id_athlete=' + id_athlete;
+        }
+
+        function deleteAthleteConfirmation(id_athlete) {
+            if (confirm("Êtes-vous sûr de vouloir supprimer cet athlète?")) {
+                // Envoi en POST du formulaire caché qui contient le token CSRF (et non un simple lien GET)
+                document.getElementById('id_athlete_supprimer').value = id_athlete;
+                document.getElementById('form-supprimer').submit();
+            }
+        }
+    </script>
+</body>
+
+</html>

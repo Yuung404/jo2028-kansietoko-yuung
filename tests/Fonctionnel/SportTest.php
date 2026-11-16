@@ -5,7 +5,7 @@ use PHPUnit\Framework\Attributes\TestDox;
 use Tests\Support\TestFonctionnel;
 
 /**
- * Fonctionnalités clés du back-office sur l'exemple des sports : ajout, modification, suppression.
+ * Fonctionnalités clés du back-office sur l'exemple des sports (le modèle fourni) : ajout, modification, suppression.
  * Chaque test vérifie le message affiché ET l'état réel de la base de données.
  */
 class SportTest extends TestFonctionnel
@@ -26,10 +26,9 @@ class SportTest extends TestFonctionnel
     #[TestDox('Ajouter un sport')]
     public function testAjouterUnSport(): void
     {
-        $this->navigateur->post(self::M . 'add-sport.php', ['nom_sport' => 'Surf'], self::M . 'add-sport.php');
-
+        $this->navigateur->post(self::M . 'add-sport.php', ['nomSport' => 'Surf'], self::M . 'add-sport.php');
         $this->assertPageSansErreur();
-        $this->assertStringContainsString('Le sport « Surf » a été ajouté.', $this->navigateur->texte());
+        $this->assertStringContainsString('Le sport a été ajouté avec succès.', $this->navigateur->texte());
         $this->assertSame(1, $this->compter('SELECT COUNT(*) FROM SPORT WHERE nom_sport = ?', ['Surf']));
         $this->assertSame(11, $this->compter('SELECT COUNT(*) FROM SPORT'));
     }
@@ -37,10 +36,19 @@ class SportTest extends TestFonctionnel
     #[TestDox('Un sport en double est refusé (majuscules et espaces ignorés)')]
     public function testUnSportEnDoubleEstRefuse(): void
     {
-        $this->navigateur->post(self::M . 'add-sport.php', ['nom_sport' => '  natation '], self::M . 'add-sport.php');
-
-        $this->assertStringContainsString('Ce sport existe déjà.', $this->navigateur->texte());
+        $this->navigateur->post(self::M . 'add-sport.php', ['nomSport' => '  natation '], self::M . 'add-sport.php');
+        $this->assertStringContainsString('Le sport existe déjà.', $this->navigateur->texte());
         $this->assertSame(10, $this->compter('SELECT COUNT(*) FROM SPORT'));
+    }
+
+    #[TestDox('Un nom avec une apostrophe est enregistré et affiché correctement')]
+    public function testUnNomAvecApostropheEstEnregistreTelQuel(): void
+    {
+        $this->navigateur->post(self::M . 'add-sport.php', ['nomSport' => "Tir à l'arc"], self::M . 'add-sport.php');
+        $this->assertSame(1, $this->compter('SELECT COUNT(*) FROM SPORT WHERE nom_sport = ?', ["Tir à l'arc"]));
+        $this->navigateur->get('/pages/sports.php');
+        $this->assertStringContainsString("Tir à l'arc", $this->navigateur->texte());
+        $this->assertStringNotContainsString('&amp;#039;', $this->navigateur->html);
     }
 
     #[TestDox('Modifier un sport')]
@@ -48,9 +56,8 @@ class SportTest extends TestFonctionnel
     {
         $id = $this->idSport('VTT');
         $url = self::M . "modify-sport.php?id_sport=$id";
-        $this->navigateur->post($url, ['nom_sport' => 'VTT cross-country'], $url);
-
-        $this->assertStringContainsString('Le sport « VTT cross-country » a été modifié.', $this->navigateur->texte());
+        $this->navigateur->post($url, ['nomSport' => 'VTT cross-country'], $url);
+        $this->assertStringContainsString('Le sport a été modifié avec succès.', $this->navigateur->texte());
         $this->assertSame('VTT cross-country', $this->pdo->query("SELECT nom_sport FROM SPORT WHERE id_sport = $id")->fetchColumn());
     }
 
@@ -59,9 +66,17 @@ class SportTest extends TestFonctionnel
     {
         $id = $this->idSport('VTT');
         $url = self::M . "modify-sport.php?id_sport=$id";
-        $this->navigateur->post($url, ['nom_sport' => 'Boxe'], $url);
+        $this->navigateur->post($url, ['nomSport' => 'Boxe'], $url);
+        $this->assertStringContainsString('Le sport existe déjà.', $this->navigateur->texte());
+        $this->assertSame(1, $this->compter('SELECT COUNT(*) FROM SPORT WHERE nom_sport = ?', ['VTT']));
+    }
 
-        $this->assertStringContainsString('Un autre sport porte déjà ce nom.', $this->navigateur->texte());
+    #[TestDox('Une modification sans jeton CSRF est refusée')]
+    public function testUneModificationSansJetonEstRefusee(): void
+    {
+        $id = $this->idSport('VTT');
+        $this->navigateur->post(self::M . "modify-sport.php?id_sport=$id", ['nomSport' => 'Piratage', 'csrf_token' => str_repeat('0', 64)]);
+        $this->assertStringContainsString('Token CSRF invalide.', $this->navigateur->texte());
         $this->assertSame(1, $this->compter('SELECT COUNT(*) FROM SPORT WHERE nom_sport = ?', ['VTT']));
     }
 
@@ -70,10 +85,8 @@ class SportTest extends TestFonctionnel
     {
         $this->pdo->exec("INSERT INTO SPORT (nom_sport) VALUES ('Breakdance')");
         $id = $this->idSport('Breakdance');
-
         $this->navigateur->post(self::M . 'delete-sport.php', ['id_sport' => $id], self::M . 'manage-sports.php');
-
-        $this->assertStringContainsString('Le sport a été supprimé.', $this->navigateur->texte());
+        $this->assertStringContainsString('Le sport a été supprimé avec succès.', $this->navigateur->texte());
         $this->assertSame(0, $this->compter('SELECT COUNT(*) FROM SPORT WHERE id_sport = ?', [$id]));
     }
 
@@ -82,7 +95,6 @@ class SportTest extends TestFonctionnel
     {
         $id = $this->idSport('Natation');
         $this->navigateur->post(self::M . 'delete-sport.php', ['id_sport' => $id], self::M . 'manage-sports.php');
-
         $this->assertStringContainsString('Suppression impossible', $this->navigateur->texte());
         $this->assertSame(1, $this->compter('SELECT COUNT(*) FROM SPORT WHERE id_sport = ?', [$id]));
     }
@@ -92,20 +104,17 @@ class SportTest extends TestFonctionnel
     {
         $this->pdo->exec("INSERT INTO SPORT (nom_sport) VALUES ('Breakdance')");
         $id = $this->idSport('Breakdance');
-
         $this->navigateur->post(self::M . 'delete-sport.php', ['id_sport' => $id, 'csrf_token' => str_repeat('0', 64)]);
         $this->assertStringContainsString('Requête de suppression invalide.', $this->navigateur->texte());
-
-        $this->navigateur->get(self::M . "delete-sport.php?id_sport=$id");     // tentative par simple lien
+        $this->navigateur->get(self::M . "delete-sport.php?id_sport=$id");     // tentative par simple lien, comme dans le code fourni
         $this->assertSame(1, $this->compter('SELECT COUNT(*) FROM SPORT WHERE id_sport = ?', [$id]));
     }
 
     #[TestDox('Un nom de sport malveillant est affiché sans être exécuté (XSS)')]
     public function testUnNomDeSportMalveillantEstAfficheSansEtreExecute(): void
     {
-        $this->navigateur->post(self::M . 'add-sport.php', ['nom_sport' => '<script>alert(1)</script>'], self::M . 'add-sport.php');
+        $this->navigateur->post(self::M . 'add-sport.php', ['nomSport' => '<script>alert(1)</script>'], self::M . 'add-sport.php');
         $this->navigateur->get('/pages/sports.php');
-
         $this->assertStringNotContainsString('<script>alert(1)</script>', $this->navigateur->html);
         $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $this->navigateur->html);
         // stocké tel quel en base (encodage à l'affichage, pas à l'enregistrement)

@@ -38,7 +38,7 @@ final class Navigateur
     public function jeton(string $chemin): string
     {
         $html = $this->get($chemin);
-        if (!preg_match('/name="csrf_token" value="([0-9a-f]{64})"/', $html, $m)) {
+        if (!preg_match('/name=["\']csrf_token["\'] value=["\']([0-9a-f]{64})["\']/', $html, $m)) {
             throw new \RuntimeException("Aucun jeton CSRF sur $chemin");
         }
         return $m[1];

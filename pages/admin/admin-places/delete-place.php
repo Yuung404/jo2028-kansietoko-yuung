@@ -1,31 +1,73 @@
 <?php
-/** Gestion des lieux : suppression (POST + CSRF), bloquée si des épreuves s'y déroulent. */
-$racine = '../../../';
-require_once __DIR__ . '/../../../includes/bootstrap.php';
-require_admin($racine);
+session_start();
+require_once("../../../database/database.php");
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !csrf_verify()) {
-    flash('error', 'Requête de suppression invalide.');
-    redirect('manage-places.php');
+// Vérifiez si l'utilisateur est connecté
+if (!isset($_SESSION['login'])) {
+    header('Location: ../../../index.php');
+    exit();
 }
 
-$idLieu = input_id(INPUT_POST, 'id_lieu');
-if ($idLieu === null) {
-    flash('error', 'Identifiant de lieu invalide.');
-    redirect('manage-places.php');
+// Protection CSRF : la suppression n'est acceptée qu'en POST, avec un token CSRF valide
+// (un simple lien GET pourrait être déclenché par un autre site à la place de l'administrateur)
+if ($_SERVER['REQUEST_METHOD'] != 'POST' || !isset($_POST['csrf_token'], $_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+    $_SESSION['error'] = "Requête de suppression invalide.";
+    header('Location: manage-places.php');
+    exit();
 }
 
-$stmt = $connexion->prepare('SELECT COUNT(*) FROM EPREUVE WHERE id_lieu = :id');
-$stmt->execute([':id' => $idLieu]);
-$nbEpreuves = (int) $stmt->fetchColumn();
-if ($nbEpreuves > 0) {
-    flash('error', "Suppression impossible : $nbEpreuves épreuve(s) se déroulent dans ce lieu. Déplacez ou supprimez d'abord ces épreuves.");
-    redirect('manage-places.php');
+// Vérifiez si l'ID du lieu est fourni
+if (!isset($_POST['id_lieu'])) {
+    $_SESSION['error'] = "ID du lieu manquant.";
+    header("Location: manage-places.php");
+    exit();
+} else {
+    $id_lieu = filter_input(INPUT_POST, 'id_lieu', FILTER_VALIDATE_INT);
+
+    // Vérifiez si l'ID du lieu est un entier valide
+    if ($id_lieu === false || $id_lieu === null) {
+        $_SESSION['error'] = "ID du lieu invalide.";
+        header("Location: manage-places.php");
+        exit();
+    } else {
+        try {
+            // Vérifiez que le lieu n'est pas utilisé ailleurs (clé étrangère EPREUVE.id_lieu).
+            // On compte d'abord, pour afficher un message clair au lieu d'une erreur SQL de clé étrangère.
+            $queryCheck = "SELECT COUNT(*) FROM EPREUVE WHERE id_lieu = :id_lieu";
+            $statementCheck = $connexion->prepare($queryCheck);
+            $statementCheck->bindParam(':id_lieu', $id_lieu, PDO::PARAM_INT);
+            $statementCheck->execute();
+
+            if ($statementCheck->fetchColumn() > 0) {
+                $_SESSION['error'] = "Suppression impossible : ce lieu accueille au moins une épreuve.";
+                header('Location: manage-places.php');
+                exit();
+            }
+
+            // Préparez la requête SQL pour supprimer le lieu
+            $sql = "DELETE FROM LIEU WHERE id_lieu = :id_lieu";
+            // Exécutez la requête SQL avec le paramètre
+            $statement = $connexion->prepare($sql);
+            $statement->bindParam(':id_lieu', $id_lieu, PDO::PARAM_INT);
+            $statement->execute();
+
+            // Message de succès
+            $_SESSION['success'] = "Le lieu a été supprimé avec succès.";
+
+            // Redirigez vers la liste après la suppression
+            header('Location: manage-places.php');
+            exit();
+        } catch (PDOException $e) {
+            // Le message SQL va dans le journal du serveur, pas à l'écran
+            error_log("Erreur PDO : " . $e->getMessage());
+            $_SESSION['error'] = "Erreur lors de la suppression du lieu.";
+            header('Location: manage-places.php');
+            exit();
+        }
+    }
 }
 
-$stmt = $connexion->prepare('DELETE FROM LIEU WHERE id_lieu = :id');
-$stmt->execute([':id' => $idLieu]);
-
-flash($stmt->rowCount() === 1 ? 'success' : 'error',
-      $stmt->rowCount() === 1 ? 'Le lieu a été supprimé.' : 'Lieu introuvable (déjà supprimé ?).');
-redirect('manage-places.php');
+// Afficher les erreurs en PHP (fonctionne à condition d’avoir activé l’option en local)
+error_reporting(E_ALL);
+ini_set("display_errors", 1);
+?>
